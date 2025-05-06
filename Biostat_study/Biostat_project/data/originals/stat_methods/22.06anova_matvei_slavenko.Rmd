@@ -1,0 +1,1093 @@
+---
+title: "Введение в дисперсионный анализ (ANOVA)"
+subtitle: "Контроль FWER в контексте линейных моделей"
+author: "Matvei Slavenko"
+date: '22.06.2024'
+output: 
+  slidy_presentation:
+    duration: 90
+editor_options: 
+  markdown: 
+    wrap: 90
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gt)
+
+mean.plus.minus.sd <- function(x) {
+  r <- c(mean(x) - sd(x), mean(x), mean(x) + sd(x))
+  names(r) <- c("ymin", "y", "ymax")
+  r
+}
+
+```
+
+## Данные. Генеральная совокупность и рабочая выборка.
+
+Файл `soccer.csv`.
+
+По-прежнему работаем с футболистами: имя, позиция на поле (защитник, форвард, голкипер или
+полузащитник), гражданство, возраст и рост.
+
+Размер рабочей выборки чуть больше: 150 человек.
+
+```{r}
+soccer_general <- read.csv("soccer.csv", sep=";")[, 2:6] %>%
+  mutate(Position = as.factor(Position),
+         Nationality = as.factor(Nationality),
+         Age = as.numeric(Age),
+         Height = as.numeric(Height)) %>%
+  filter(Nationality %in% c("Spanish", "Italian", "German", "English", "Argentinian"))
+```
+
+Делаем выборку 150 человек из ГС
+
+```{r}
+set.seed(1)
+
+soccer_wrk <- soccer_general[sample(1:nrow(soccer_general), 150), ] %>%
+  mutate(Nationality = factor(Nationality))
+```
+
+Дисклеймер: *Не совсем корректно, конечными генеральными совокупностями занимается не
+классическая статистика, а sample surveys. Но для сегодняшних целей пойдет.*
+
+## В предыдущих сериях
+
+```{r out.extra = 'style="float:left; padding:10px"'}
+set.seed(1)
+
+soccer_wrk %>%
+  ggplot() + aes(Position, Height) +
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") +
+  geom_jitter(width = 0.2, colour = "cornsilk4") +
+  theme_classic() +
+  ylab("Height (cm)")
+```
+
+-   Попарные сравнения
+-   Попарных сравнений много, поэтому поправки
+-   Иными словами: а есть ли связь между позицией и средним ростом футболиста? Важны два
+    слова:
+    -   СВЯЗЬ
+    -   СРЕДНИМ РОСТОМ (т.к. использовали т-тест, а он сравнивает средние, но можно было
+        сравнивать и медиану и дисперсию или все распределение целиком) Просто
+        предполагаем что есть какая то связь, но мы не знаем в какую сторону это работает
+        Есть еще раздел статистики - причинно-следственный анализ Обычная статистика
+        просто анализирует ассоциацию
+
+## Условное математическое ожидание aka математический `filter(...) %>% mean`
+
+Для каждого футболиста мы записывали его рост ($Y_i$) и позицию на поле ($D_i$). То есть
+i-тое наблюдение -- это вектор $(Y_i; D_i)$. В прошлый раз мы занимались защитниками
+(defenders). Средний рост в группе защитников мы можем понимать как средний рост
+футболиста при условии, что он защитник -\> условное среднее (условное мат ожидание),
+conditional expectation.
+
+Записываем так: $$\mathsf{E}[Y|D = \text{Defender}]$$.
+
+Если мы не завели специальное обозначение, можем писать полнее:
+$$\mathsf{E}[Age|D = \text{Defender}]$$.
+
+*УМО -- один из способов концептуализировать информацию, которую несет в себе позиция на
+поле о росте футболиста.* То есть если есть ассоциация, то зная позицию игрока на поле мы
+приобретаем еще информацию о его росте.
+
+Условный средний рост футболиста в генеральной совокупности при условии, что он защитник:
+
+```{r}
+soccer_general %>% filter(Position == "Defender") %>% pull(Height) %>% mean
+```
+
+Точечная оценка среднего роста футболиста при условии, что он защитник:
+
+```{r}
+soccer_wrk %>% filter(Position == "Defender") %>% pull(Height) %>% mean
+```
+
+## В предыдущих сериях: новый взгляд
+
+```{r out.extra = 'style="float:left; padding:10px"'}
+set.seed(1)
+
+soccer_wrk %>%
+  ggplot() + aes(Position, Height) +
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") +
+  geom_jitter(width = 0.2, colour = "cornsilk4") +
+  theme_classic() +
+  ylab("Height (cm)")
+```
+
+Обозначим реальные условные средние: \begin{align*}
+$ \mu_{Def}  &= \mathsf{E}[Y| D = \text{Defender}] \\$
+$ \mu_{For}  &= \mathsf{E}[Y| D = \text{Forward}] \\ $
+$ \mu_{Goal}  &= \mathsf{E}[Y| D = \text{Goalkeeper}] \\$
+$ \mu_{Mid}  &= \mathsf{E}[Y| D = \text{Midfielder}]$
+\end{align*}
+
+
+Мы тестировали:
+
+\begin{gather*}
+$$ H_0^1: \mu_{Def} - \mu_{For} = 0 \qquad vs. \qquad H_1^1: \mu_{Def} - \mu_{For} \neq 0 \\ $$
+$$ H_0^2: \mu_{Def} - \mu_{Goal} = 0 \qquad vs. \qquad H_1^2: \mu_{Def} - \mu_{Goal} \neq 0 \\ $$
+$\ldots \\$
+$$H_0^6: \mu_{Goal} - \mu_{Mid} = 0 \qquad vs. \qquad H_1^6: \mu_{Goal} - \mu_{Mid} \neq 0 $$
+\end{gather*}
+
+
+-   Иными словами: а есть ли связь между позицией и средним ростом футболиста?
+
+Это можно сформулировать иначе: \begin{align*}
+& $$H_0\!: \mu_{Def} = \ldots = \mu_{Mid} \\$$ - нулевая гипотеза рост всех одинаков
+vs. \\
+& $$H_1\!: \exists i,j: \mu_i \neq \mu_j$$ - альтернатива, хотя бы в одной паре сравнения средний рост отличается
+\end{align*}
+
+Т.е. *"(условный) средний рост футболиста не ассоциирован с его позицией на поле"* или
+*"позиция игрока на поле не несет информации о среднем росте футболиста"*.
+
+-   Моделированием условного математического ожидания (среднего) занимается регрессия - занимается анализом матожиданий при разных условиях, стартовый подход - линейная регрессия. Специальный случай линейной регрессионной модели - ANOVA или дисперсионный анализ. 
+-   А есть ли связь между позицией и средним ростом футболиста? Такую гипотезу тестирует
+    AN(C)OVA -- Analysis of (Co)Variance -- Дисперсионный / ковариационный анализ --
+    частный случай регрессионной модели. В условиях (в регрессорах) одна дискретная переменная (4 позиции на поле, 4 группы крови, 4 вида терапии)
+-   УМО -- один из способов концептуализировать информацию, которую несет в себе позиция
+    на поле о росте футболиста.
+    -   Как измерить эту информацию?
+
+
+## Новый взгляд на среднее и дисперсию
+Мерилом неопределенности может служить дисперсия (верхняя картинка - в гс, нижняя - в выборке)
+
+$$ \mathsf{E}X := \int_{\mathbb{R}} xf_X(x)dx  \qquad \mathsf{var}X := \mathsf{E}\left(X - \mathsf{E}X\right)^2$$
+
+$$ \overline{X_n} := \frac{1}{n} \sum_{i=1}^n X_i \qquad S_n^2 := \frac{1}{n-1} \sum_{i=1}^n(X_i - \overline{X_n})^2 $$
+
+-   Среднее (мат ожидание) -- это в каком-то смысле оптимальное выражение распределения одним числом.
+-   Дисперсия -- мера (не)оптимальности -- мера неопределенности. То расстояние на которое случайная величина удаляется от мат ожидания. То сколько теряем информации схлопывая до одного числа
+$$\mathsf{E}X = \arg \min_{a\in\mathbb{R}} \mathsf{E}\left(X-a\right)^2$$
+Дисперсия - среднее расстояние на которое случайная велчина удаляется от мат ожидания. 
+-   Дисперсия -- это сумма квадратов. Если минимализируем сумму квадратов получаем мат ожидание. 
+
+Дополнительный кусочек пазла для самостоятельного изучения: [неравенство / теорема
+Чебышева](https://ru.wikipedia.org/wiki/Неравенство_Чебышёва) объясняет, что дисперсия
+действительно дает оценку вариабельности данных.
+
+## Две модели для среднего
+
+```{r fig.align='center', out.width='70%', echo=FALSE}
+ggplot(aes(y = Height, x = Position), data = soccer_wrk) +
+  ylim(155, 210) +
+  geom_jitter(colour = "cornsilk4", position=position_jitter(width=.2)) + 
+  ggtitle("Boxplot: mean + sd") + 
+  xlab("Position") + 
+  ylab("Height (cm)") +
+  ggtitle("Mean +- SD") +
+  theme_classic()
+```
+
+## Две модели для среднего
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+set.seed(1)
+
+soccer_wrk %>%
+  ggplot() +
+  aes(0, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, size = 1, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "salmon3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ylab("Height (cm)") +
+  ggtitle("Mean +- SD") +
+  scale_x_continuous("", breaks = 0, labels = c("Pooled"), limits = c(-1.5, 1.5))
+```
+Если нулевая гипотеза верна, если среднее одинаковое, то можно все объединить вместе и посчитать среднее по всем вместе. Длина коробки это плюс минус sd. Коробка - мера неопрделенности
+1.  Простая модель M0 (нулевая гипотеза верна): посчитать среднее по всем футболистам.
+
+## Две модели для среднего
+
+```{r out.extra = 'style="float:left; padding:10px"', echo = FALSE}
+soccer_wrk %>%
+  ggplot() +
+  aes(Position, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "cadetblue3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ggtitle("Mean +- SD") +
+  ylab("Height (cm)")
+```
+Второй вариант - верна альтернативная гипотеза и считаем среднее в каждой группе отдельно.
+
+2.  Более сложная модель М1: посчитать среднее в каждой группе отдельно.
+
+## Две модели для среднего
+
+```{r out.extra = 'style="float:left; padding:10px"', echo = FALSE}
+soccer_wrk %>%
+  ggplot() +
+  aes(Position, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "cadetblue3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ylab("Height (cm)") +
+  ggtitle("Mean +- SD") +
+  xlim(c("Pooled", "Defender", "Forward", "Goalkeeper", "Midfielder")) + 
+  geom_jitter(aes("Pooled", Height), colour = "cornsilk4", width = 0.2, size = 1, alpha = 0.5) +
+  stat_summary(aes("Pooled", Height), fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "salmon3",
+               width = 0.5,
+               lwd = 1)
+```
+
+Имеет ли смысл рассматривать более сложную модель, или простая описывает данные
+"достаточно хорошо"?
+
+
+$$ H_0\!: \mu_{Def} = \ldots = \mu_{Mid} \quad vs. \quad H_1\!: \exists i,j: \mu_i \neq \mu_j $$
+
+Если справедлива нулевая гипотеза, то обе модели описывают одно и то же число! Значит, если справедлива гипотеза, то оценки не должны отличаться слишком сильно. Или: conditioning позицией на поле не должен слишком сильно снижать неопределенность. Если добавляем информацию о позиции на поле неопределенность не сниажется сильно
+
+## Две модели для среднего
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+soccer_wrk %>%
+  ggplot() +
+  aes(Position, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "cadetblue3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ylim(163, 202) +
+  ylab("Height (cm)") +
+  ggtitle("Mean +- SD") +
+  xlim(c("Pooled", "Defender", "Forward", "Goalkeeper", "Midfielder")) + 
+  geom_jitter(aes("Pooled", Height), colour = "cornsilk4", width = 0.2, size = 1, alpha = 0.5) +
+  stat_summary(aes("Pooled", Height), fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "salmon3",
+               width = 0.5,
+               lwd = 1)
+```
+
+```{r out.extra = 'style="float:right; padding:10px"', echo=FALSE}
+soccer_wrk %>%
+  group_by(Position) %>% 
+  mutate(Height = Height - mean(Height)) %>%
+  ggplot() +
+  aes(Position, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "cadetblue3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ylab("Height (cm)") +
+  ylim(163 - 180, 202 - 180) +
+  ggtitle("Mean +- SD, Centered within Groups") +
+  xlim(c("Pooled", "Defender", "Forward", "Goalkeeper", "Midfielder")) + 
+  geom_jitter(aes("Pooled", Height), colour = "cornsilk4", width = 0.2, size = 1, alpha = 0.5) +
+  stat_summary(aes("Pooled", Height), fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "salmon3",
+               width = 0.5,
+               lwd = 1)
+```
+Неопределенность - длины "коробочек" усредненные между собой - выровняли их как будто нулевая гипотеза верна (вторая картинка) - сравнить нужно красную коробочку и синие
+
+
+## Две модели для среднего
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE, message=FALSE, warning=FALSE}
+soccer_wrk %>%
+  ggplot() +
+  aes(Position, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "cadetblue3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ylab("Height (cm)") +
+  ggtitle("Mean +- SD") +
+  xlim(c("Pooled", "Defender", "Forward", "Goalkeeper", "Midfielder")) + 
+  geom_jitter(aes("Pooled", Height), colour = "cornsilk4", width = 0.2, size = 1, alpha = 0.5) +
+  stat_summary(aes("Pooled", Height), fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "salmon3",
+               width = 0.5,
+               lwd = 1)
+```
+
+**Неопределенность простой модели M0:** когда всех вместе объединили - дисперсия!
+
+$$S_n^2 := \frac{1}{n-1} \sum_{i=1}^n(Y_i - \overline{Y_n})^2$$
+
+Ну, или как сумма квадратов (полная, в контексте anova, total sum of squares):
+
+$$SS_T := \sum_{i=1}^n(Y_i - \overline{Y_n})^2 $$
+
+## Две модели для среднего
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE, message=FALSE, warning=FALSE}
+soccer_wrk %>%
+  ggplot() +
+  aes(Position, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "cadetblue3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ylab("Height (cm)") +
+  ggtitle("Mean +- SD") +
+  xlim(c("Pooled", "Defender", "Forward", "Goalkeeper", "Midfielder")) + 
+  geom_jitter(aes("Pooled", Height), colour = "cornsilk4", width = 0.2, size = 1, alpha = 0.5) +
+  stat_summary(aes("Pooled", Height), fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "salmon3",
+               width = 0.5,
+               lwd = 1)
+```
+
+**Неопределенность сложной модели M1:** тоже в каком то смысле дисперсия!
+
+Ну, почти. Поправим формулу так, чтобы мы учитывали то, что в разных группах, возможно,
+разные средние. Обозначим среднее, посчитанное в группе $D$, как $$\widehat{\mu}_{D_i}$$. Просто вычитаем не общее среднее, а среднее по группе. 
+
+$$S_n^2 := \frac{1}{n-1} \sum_{i=1}^n(Y_i - \widehat{\mu}_{D_i})^2$$
+
+Ну, или как сумма квадратов (остаточная, residual sum of squares):
+
+$$SS_e := \sum_{i=1}^n(Y_i - \widehat{\mu}_{D_i})^2 $$
+
+## Две модели для среднего
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE, message=FALSE, warning=FALSE}
+soccer_wrk %>%
+  ggplot() +
+  aes(Position, Height) +
+  geom_jitter(colour = "cornsilk4", width = 0.2, alpha = 0.5) +
+  stat_summary(fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "cadetblue3",
+               width = 0.5,
+               lwd = 1) +
+  theme_classic() +
+  xlab("") +
+  ylab("Height (cm)") +
+  ggtitle("Mean +- SD") +
+  xlim(c("Pooled", "Defender", "Forward", "Goalkeeper", "Midfielder")) + 
+  geom_jitter(aes("Pooled", Height), colour = "cornsilk4", width = 0.2, size = 1, alpha = 0.5) +
+  stat_summary(aes("Pooled", Height), fun.data = mean.plus.minus.sd, 
+               geom = "errorbar",
+               colour = "salmon3",
+               width = 0.5,
+               lwd = 1)
+```
+
+**Неопределенность простой модели M0:** полная сумма квадратов
+$$SS_T := \sum_{i=1}^n(Y_i - \overline{Y_n})^2$$ 
+**Неопределенность сложной модели M1:**
+остаточная сумма квадратов 
+$$SS_e := \sum_{i=1}^n(Y_i - \widehat{\mu}_{D})^2$$
+Есть две неопределенности и если H0 верна они не долнжы сильно отличаться, а если верна альтернатива, то остаточная сумма квадратов должна быть значимо меньше, чем неопределенность в модели М0. 
+
+Посчитаем, какой процент неопределенности был "объяснен" позицией на поле:
+
+$$ \frac{SS_T - SS_e}{SS_T} $$
+
+Кажется, это может быть интересная метрика (спойлер: это же $$R^2$$)! Всплывает в линейной регрессии
+
+
+Чтобы тестировать, нам нужно знать распределение тестовой статистики, поэтому нормализуют. Используют:
+
+$$F := \frac{\frac{SS_T - SS_e}{K-1}}{\frac{SS_e}{n-K}}$$
+Вычитание - по аналогии с дисперсией для выборки (где n - 1). N - 1 так как есть среднее и поэтому можем найти последнее наблюдение с использованием n-1 членов выборки. Используя подсчитанное что то на основе выборки теряем одну степень свободы
+
+$$K$$ -- количество групп.
+
+$$n$$ -- количество наблюдений.
+
+Получили F статистику Фишера
+
+## Условия для тестирования. F-test
+
+```{r out.extra = 'style="float:left; padding:10px"'}
+set.seed(1)
+
+soccer_wrk %>%
+  ggplot() + aes(Position, Height) +
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") +
+  geom_jitter(width = 0.2, colour = "cornsilk4") +
+  theme_classic() +
+  ylab("Height (cm)")
+```
+
+Условия:
+
+-   **Нормальность.** Распределение внутри каждой группы нормально. В нашем примере более менее норм.
+-   **Гомоскедастичность** ака равенство дисперсий. Дисперсии в каждой группе одинаковы. Дисперсии скорее не равны в примере, но 
+
+Если условия выполнены, то:
+
+$$F := \frac{\frac{SS_T - SS_e}{K-1}}{\frac{SS_e}{n-K}} \sim F_{K-1, n-K}$$
+
+Тест точный! То есть работает и на маленьких выборках
+
+## F-test в нашем случае
+
+Посчитаем сначала руками.
+
+$K=4$, $n=150$.
+
+Посчитаем $$SS_T$$.
+
+$$SS_T := \sum_{i=1}^n(Y_i - \overline{Y_n})^2 $$
+
+Два варианта:
+
+```{r}
+soccer_wrk %>% pull(Height) %>% var*(nrow(soccer_wrk)-1)
+```
+
+```{r}
+SST <- with(soccer_wrk, (sum(
+  (Height - mean(Height))^2
+  )))
+
+SST
+```
+
+## F-test в нашем случае
+
+Посчитаем сначала руками.
+
+$K=4$, $n=150$
+
+Посчитаем $SS_e$
+
+$$SS_e := \sum_{i=1}^n(Y_i - \widehat{\mu}_{D})^2 $$
+
+```{r}
+SSe <- soccer_wrk %>% group_by(Position) %>% mutate(residuals = Height - mean(Height)) %>%
+  with(sum(residuals^2))
+
+SSe
+```
+
+## F-test в нашем случае
+
+Посчитаем сначала руками.
+
+$K=4$, $n=150$
+
+Итого:
+
+```{r}
+SST
+SSe
+SST-SSe
+
+F <- (SST - SSe)/3 / ((SSe)/(150-3))
+F
+```
+Автоматически:
+lm - функция, которая строит модели линейной регрессии (моделируем рост в зависимости от позиции на поле, на основании data = рабочая выборка) дальше проводим дисперсионный анализ - функция anova
+
+```{r}
+lm(Height ~ Position, data = soccer_wrk) %>% anova
+```
+Переменная Position объясняет 1345 сумм квадратов (SST) 
+Sum sq верхняя - SST, нижняя SSe
+Mean Sq - сумма квадратов поделить на число степеней свободы
+P-value очень маленькое можем отвергнуть нулевую гипотезу
+
+## Нарушение условий для тестирования. F-test
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(1)
+
+soccer_wrk %>%
+  ggplot() + aes(Position, Height) +
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") +
+  geom_jitter(width = 0.2, colour = "cornsilk4") +
+  theme_classic() +
+  ylab("Height (cm)")
+```
+
+Anova Welch
+balanced anova (наибольшая мощность когда количество наблюдений в каждой группе одинаково - заранее запланировать одинаковое количество наблюдений в группах)
+-   **Нормальность.** Если данные распределены ненормально, то тест все равно
+    асимптотически консистентный. То есть, работает, если данных достаточно.
+-   **Гетероскедастичность** ака неравенство дисперсий. И снова Велш (Welch) приходит нам на помощь. F-test Велша работает и в случае негомоскедастичных моделей, при достаточном количестве наблюдений.
+    -   Второй вариант: сбалансированная / уравновешенная (balanced) ANOVA. Если в группах +- одинаковое количество наблюдений, обычная ANOVA работает при достаточном    количестве наблюдений.
+-   Unbalanced ANOVA: лучше всего тест работает тогда, когда в каждой группе +- одинаковое количество наблюдений.
+
+## Нарушение условий для тестирования. F-test
+
+Стандартная ANOVA:
+альтернатива предыдущему коду функция aov
+
+```{r}
+aov(Height ~ Position, data = soccer_wrk) %>% summary
+```
+
+F-тест Велша:
+функция oneway.test
+
+```{r}
+oneway.test(Height ~ Position, data = soccer_wrk)
+```
+Полученные F значения не очень соотносятся между разными тестами, так как разное число степеней свободы. Но в обоих случаях отвергаем гипотезу о равенстве средних
+
+
+## Промежуточные итоги
+
+1.  Программистское `... %>% filter(Position = "Defender") %>% pull(Height) %>% mean`
+    соответствует математическому $$\mathsf{E}[Y|D = \text{Defender}]$$ . Соответствует идее матожидания
+2.  Среднее -- в определенном смысле лучшее описание распределения одним числом. Дисперсия -- мера неопределенности (насколько далеко от среднего). Если оптимизировать не квадраты, а абсолютное отклонение, тогда получим медиану.
+3.  Пачку попарных t-тестов мы можем переформулировать с помощью одного F-теста. При этом мы теряем информацию о том, какие именно группы отличаются в пользу (надеемся) большей силы теста.
+4.  Если данных не очень много, нужно проконтролировать нормальность и гомоскедастичность, например, с помощью боксплотов или qq- и scale-location plots и других инструментов диагностики линейных моделей. Лучше визуальные тесты, а не формальные
+5.  Если данных много, то Велш все спасет.
+6.  Совсем уж экстремальные выбросы стоит исследовать более подробно. Не значит что нужно убирать, нужно подумать откуда взялись, мб ошибка и тд. Автоматически выбросы убирать не стоит. 
+
+# Часть 2. Post hocs
+
+## Противоопухолевая терапия
+
+```{r echo=TRUE}
+set.seed(22)
+
+bdr <- tibble(
+  therapy = c(rep("0", 10), rep("A", 10), rep("B", 10), rep("AB", 10)),
+  value = c(rep(3537, 10), rep(2745, 10), rep(2521, 10), rep(2209, 10))
+) %>%
+  mutate(therapy = factor(therapy, levels = c("0", "A", "B", "AB")))
+
+bdr$value <- bdr$value + rnorm(40, 0, 760)
+
+```
+
+```{r echo=TRUE}
+bdr %>% summary()
+```
+Есть 4 группы в каждой из которых по 10 наблюдений. Группа 0 - контроль, которую ни чем не лечат, А - дают препарат А, В - дают препарат В, АВ - дают и то и другое. Задаем ГС (value указываем средний размер опухоли) и симулируем выборку так, что добавляем случайный шум (rnorm) и с определенной дисперсией
+
+## Противоопухолевая терапия
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+set.seed(1)
+
+bdr %>% ggplot() + 
+  aes(therapy, value) + 
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") + 
+  geom_jitter(width = 0.2, colour = "cornsilk4", alpha = 0.5) + 
+  theme_classic() + ylab("Tumor volume, mm^3") + xlab("Therapy")
+```
+
+**Легенда**: исследуем противоопухолевую эффективность препаратов A и B и комбинированной терапии. Рандомизированное плацебо-контролируемое исследование на мышах. Конечная точка: объем опухоли на 17-й день от начала исследования. Чем меньше, тем лучше.
+
+**Задача:**
+
+1.  Провести количественную оценку противоопухолевой активности препаратов
+2.  Оценить эффект комбинированной терапии Препаратом A и Препаратом B
+3.  Оценить синергический эффект препаратов A+B (А + В - аддитивный эффект, синергия, когда превосходит сумму). Но может быть и конкуренция и тогда их совместное применение будет не очень
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+## Возможные методы: попарные t-тесты. Оценка эффективности препаратов
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+set.seed(1)
+
+bdr %>% ggplot() + 
+  aes(therapy, value) + 
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") + 
+  geom_jitter(width = 0.2, colour = "cornsilk4", alpha = 0.5) + 
+  theme_classic() + ylab("Tumor volume, mm^3") + xlab("Therapy")
+```
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+Методы: используем двухвыборочный t-тест для сравнения групп.
+
+-   Сравнение A vs. 0: эффект препарата А
+-   Сравнение B vs. 0: эффект препарата B
+
+Какими вообще могут быть эффекты?
+
+Нет эффекта / ухудшает течение болезни / улучшает течение болезни.
+
+Дополнительно:
+
+-   Сравнение A vs. B: какой препарат лучше?
+
+Методы: используем двухвыборочный t-тест для сравнения групп.
+
+-   Сравнение AB vs 0: проверим общий эффект комбинированной терапии
+-   Сравнение AB vs A: добавляет ли что-то комбинированная терапия по отношению к терапии только препаратом А?
+-   Сравнение AB vs. B: добавляет ли что-то комбинированная терапия по отношению к терапии только препаратом B?
+
+*Оценить синергический эффект препаратов A+B*
+
+По идее "эффект синергии" -- это разница между эффектом A + эффектом B и эффектом в группе AB. Но эту величину мы не можем оценить с помощью t-тестов.
+
+**Проблема**: только косвенная оценка синергии.
+
+## Попарные t-тесты. Плюсы и минусы
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+set.seed(1)
+
+bdr %>% ggplot() + 
+  aes(therapy, value) + 
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") + 
+  geom_jitter(width = 0.2, colour = "cornsilk4", alpha = 0.5) + 
+  theme_classic() + ylab("Tumor volume, mm^3") + xlab("Therapy")
+```
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+Каковы плюсы и минусы такого метода?
+
+**Плюсы:**
+
+-   Простой и понятный метод
+-   Легко интерпретировать результаты
+
+**Минусы:**
+
+-   Проблема множественных сравнений: нужны поправки, которые ведут к потере мощности
+-   Неполное использование данных: для оценки эффекта препарата A не используем группу AB
+-   Не можем оценить синергию препаратов: только косвенные свидетельства
+
+## Возможные методы: линейная модель + ANOVA
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+set.seed(1)
+
+bdr %>% ggplot() + 
+  aes(therapy, value) + 
+  geom_boxplot(outlier.shape = "", colour = "cadetblue3") + 
+  geom_jitter(width = 0.2, colour = "cornsilk4", alpha = 0.5) + 
+  theme_classic() + ylab("Tumor volume, mm^3") + xlab("Therapy")
+```
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+```{r}
+m1 <- lm(value ~ therapy, data = bdr)
+
+m1 %>% anova
+```
+
+## Возможные методы: линейная модель + ANOVA
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+```{r}
+m1 %>% anova
+```
+
+Посмотрим на описание модели. Что значат коэффициенты регрессоров? Отправим в summary
+
+```{r}
+m1 %>% summary
+```
+Estimate Std. - видим в столбце как терапии снижают объем опухоли по сравнению с плацебо (Intercept). Можем даже сверху навесить поправку. 
+
+-   `(Intercept)` -- средний объем опухоли в группе плацебо
+-   `therapyA` -- разница в среднем объеме опухоли между группой А и плацебо, т.е. эффект
+    препарата А на средний объем опухоли
+-   `therapyB` -- разница в среднем объеме опухоли между группой B и плацебо
+-   `therapyAB` -- разница в среднем объеме опухоли между группой с комбинированной
+    терапией и плацебо
+
+## Но я хочу доверительные интервалы! Post hoc анализ
+
+1.  Обычно практикуемый подход: запустить F-test, в случае маленького p-value разбираться подробнее (поэтому post hoc).
+2.  Специальный случай: есть процедуры, контролирующие FWER, более сильные чем Бонферрони, Холм и Ко.
+3.  Процедур много: Даннетт, Тьюки, доверительные эллипсоиды, дуальные к F-тесту...
+
+Мы остановимся на относительно новой процедуре: процедура Хоторна-Бретца-Вестфала (Hothorn, Bretz, Westfall), основанной на многомерном t-распределении. Макс-апстейр процедура
+
+Итак, мы хотим доверительные интервалы для разницы в среднем размере опухоли; попарно сравнить группы с разной терапией; контролировать FWER.
+
+Стартуем со стандартными предположениями: **нормальность** и **гомоскедастичность**.
+
+Еще раз проверим, что **терапия** на поле *ассоциирована* со *средним размером опухоли*.
+
+```{r}
+aov(value ~ therapy, data = bdr) %>% summary
+
+oneway.test(value ~ therapy, data = bdr)
+
+```
+получили маленькое p-value двигаемся дальше
+
+Можем приступить к post hoc анализу.
+
+```{r message=FALSE}
+library(multcomp)
+```
+Подгоняем нашу модель функция lm и отправляем в функцию multcomp::glht (обобщенные тесты для линейных комбинаций, линейных гипотез). Нужно специфицировать какие линейные гипотезы хотим протестировать, можно руками написать, можно выбрать пресет. Выбираем пресет с помощью функции mcp в ней указываем, что хотим сравнивать группы по терапии и сравнивать как Tukey - то есть сравнивать попарно каждую группу с каждой. 
+
+```{r}
+
+m1 <- bdr %>% lm(value ~ therapy, data = .)
+HBW.comp <- m1 %>% multcomp::glht(linfct = mcp(therapy = "Tukey"))
+
+```
+
+Tukey сигнализирует, что мы хотим сравнить каждую группу с каждой. **Анализ выполняется не методом Тьюки**, а методом Хоторна-Бретца-Вестфалла! Даннет - сравниваем все группы с контролем (первой группе)
+
+Указанные доверительные интервалы и p-values уже рассчитаны с учетом необходимости
+контролировать FWER.
+
+Помним, что чем меньше опухоль, тем лучше.
+
+```{r}
+HBW.comp %>% summary()
+```
+Интерпретируем:
+Проводилось сравнение объема опухоли в зависимости от терапии. 
+А - 0 == 0 это сравнение терапии А с контролем, получили статистически значимые отличия
+аналогично значимо В и АВ. Остальные отличия были не стат значимы (между группами терапии). Полученные p value уже после поправки. Контролируются FWER
+
+Распечатаем ДИ:
+```{r}
+HBW.comp %>% confint()
+```
+
+Красивые картиночки работают "из коробки".
+
+Указанные доверительные интервалы и p-values уже рассчитаны с учетом необходимости
+контролировать FWER.
+
+Помним, что чем меньше опухоль, тем лучше.
+
+```{r fig.width=10, fig.align='center'}
+
+HBW.comp %>% plot(xlab = "Volume difference (cm^3)")
+
+```
+
+В случае, если соблюдены условия **нормальности** и **гомоскедастичности**, метод точный, т.е. работает и для малых выборок. Метод использует квантили многомерного t-распределения, аналитически не подсчитать это, симулируют методом Монте-Карло. Поэтому если нужна 100% воспроизводимость, не забудьте использовать `set.seed` перед тем как запускать функцию glht
+
+Это очень гибкий метод: можно не только попарно сравнивать группы между собой, можно тестировать любые наборы линейных гипотез. К сожалению, это за рамками сегодняшнего занятия.
+
+Нарушение условий использования:
+
+1.  Если нарушено условие **нормальности**, то дополнительных телодвижений делать не    нужно: для достаточно больших выборок метод работает (асимптотическая  консистентность).
+2.  Если вдобавок нарушено условие **гомоскедастичности**, то нужно использовать робастную оценку ковариационной матрицы (сендвичи).
+
+## Но я хочу доверительные интервалы! Post hoc анализ
+
+```{r}
+HBW.comp %>% summary
+```
+Минус - у нас не хватает оценки синергического эффекта препаратов А + В
+
+**Задача:**
+
+1.  Провести количественную оценку противоопухолевой активности препаратов
+2.  Оценить эффект комбинированной терапии Препаратом A и Препаратом B
+3.  Оценить синергический эффект препаратов A+B
+
+*Оценить синергический эффект препаратов A+B*
+
+По идее "эффект синергии" -- это разница между эффектом A + эффектом B и эффектом в группе AB. Можем ли мы оценить эту величину?
+
+Задаем руками (каждая терапия с контролем, и дописали что сравниваем АВ с комбинацией терапий и А и В):
+```{r}
+HBW.synergy <-
+  m1 %>% multcomp::glht(
+    linfct = c(
+      "therapyA = 0",
+      "therapyB = 0",
+      "therapyAB = 0",
+      "therapyAB - therapyA - therapyB = 0"
+    )
+  )
+
+HBW.comp %>% summary
+
+HBW.synergy %>% summary
+
+HBW.synergy %>% confint
+```
+
+## ANOVA + post hocs. Плюсы и минусы
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+
+HBW.comp %>% plot(xlab = "Volume difference (cm^3)")
+
+```
+
+**Плюсы:**
+
+-   Автоматически контролирует FWER (по желанию можно отключить поправку)
+-   Легко интерпретировать результаты
+-   Можем оценить синергию препаратов
+
+**Минусы:**
+
+-   Метод менее прямолинеен по сравнению с t-тестами
+-   Неполное использование данных: для оценки эффекта препарата A не используем группу AB
+-   Оценка синергии требует дополнительных телодвижений
+
+## Two-Way ANOVA
+Мышки в группе АВ по идее не отдельные, так как они получали и препарат А и препарат В
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+Давайте изменим взгляд на наши данные.
+
+```{r}
+bdr <- bdr %>% mutate(
+  A = ifelse(therapy %in% c("A", "AB"), "Yes", "No"),
+  B = ifelse(therapy %in% c("B", "AB"), "Yes", "No")
+)
+```
+
+```{r}
+bdr %>% glimpse
+```
+Другой взгляд на данные: получала ли мышь терапию А, и получала ли она терапию В.
+```{r message=FALSE}
+bdr %>% group_by(A, B) %>% summarise(mean = mean(value)) %>%
+  pivot_wider(names_from = A, names_prefix = "A", values_from = mean) %>% gt
+```
+
+## Two-Way ANOVA
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+```{r message=FALSE}
+bdr %>% group_by(A, B) %>% summarise(mean = mean(value)) %>%
+  pivot_wider(names_from = A, names_prefix = "A", values_from = mean) %>% gt
+```
+
+Что значат коэффициенты в такой модели?
+
+```{r}
+mA_B <- bdr %>% lm(value ~ A + B, data = .)
+
+mA_B %>% summary
+```
+
+-   `(Intercept)` -- средний размер опухоли в группе плацебо
+-   `(AYes)` -- эффект препарата А, разница между средним размером опухоли в группе А и
+    плацебо
+-   `(BYes)` -- эффект препарата B
+
+Каков эффект комбинированной терапии? Иными словами, как посчитать средний размер опухоли в группе AB?
+
+Но такая модель не допускает никакого взаимодействия, синергии. С одной сторны сузили
+
+Модель предполагает аддитивный эффект препаратов: эффект комбинированной терапии это
+`AYes + BYes`.
+
+Средний размер опухоли в группе AB `(Intercept) + AYes + BYes`.
+
+Заметим, что с помощью трех параметров мы оценили четыре группы. Оптом -- дешевле!
+
+## Two-Way ANOVA
+
+```{r echo=FALSE}
+bdr %>% group_by(therapy) %>% summarise(value = mean(value)) %>% 
+  pivot_wider(names_from = therapy) %>% 
+  gt %>% fmt_number()
+```
+
+```{r message=FALSE}
+bdr %>% group_by(A, B) %>% summarise(mean = mean(value)) %>%
+  pivot_wider(names_from = A, names_prefix = "A", values_from = mean) %>% gt
+```
+
+Что значат коэффициенты в такой модели? Если предполагаем синергию: добавляем А * В
+
+```{r}
+mAB <- bdr %>% lm(value ~ A*B, data = .)
+
+mAB %>% summary
+```
+-   `(Intercept)` -- средний размер опухоли в группе плацебо
+-   `(AYes)` -- эффект препарата А, разница между средним размером опухоли в группе А и     плацебо
+-   `(BYes)` -- эффект препарата B
+-   `(AYes:BYes)` -- интеракция (interaction term) препаратов A и B. Явная оценка     синергического эффекта!
+
+Среднее значение опухоли в группе AB равно `(Intercept) + (AYes) + (BYes) + (AYes:BYes)`
+
+В этот раз мы не предполагаем аддитивность модели, поэтому для описания четырех групп нам понадобилось четыре параметра.
+
+Two-Way ANOVA позволяет полностью использовать составную структуру данных и ответить на
+следующие вопросы:
+
+-   Есть ли между препаратами интеракция, или мы они действуют аддитивно?
+-   Есть ли эффект у препаратов по отдельности? (ANOVA)
+
+
+```{r}
+mAB <- bdr %>% lm(value ~ A*B, data = .)
+
+mAB %>% summary
+```
+
+Используем функцию aov
+```{r}
+bdr %>% aov(value ~ A * B, data = .) %>% summary
+```
+
+Поскольку датасет очень простой, принтинги почти совпадают.
+
+## Two-Way ANOVA -- более сложный пример
+
+```{r}
+soccer_wrk <- soccer_general %>%
+  mutate(Nationality = factor(Nationality)
+         )
+
+soccer_wrk %>% summary
+```
+
+## Two-Way ANOVA -- более сложный пример
+
+```{r}
+m_NP <- soccer_wrk %>% lm(Height ~ Nationality * Position, data = .)
+
+m_NP %>% summary
+```
+
+## Two-Way ANOVA -- более сложный пример
+
+```{r}
+m_NP %>% aov %>% summary
+```
+
+## Что дальше?
+
+1.  Two-way ANOVA, AN(C)OVA и иже с ними -- все это частный случай линейной регрессии.
+2.  А если я знаю, что в группах данные распределены не нормально, а экспоненциально? Без     паники, вам на помощь идут обобщенные линейные модели (generalised linear models -- GLM).
+3.  А если у меня зависимые данные (панельные, лонгитудинальные...)? Смешанные модели     (Linear Mixed Models) и/или обобщенные оценочные уравнения (Generalized Estimating     Equations -- GEE).
+
+## Литература
+
+1.  Монументальный труд Арношта Комарка [Linear Regression Course     Notes](https://www2.karlin.mff.cuni.cz/~komarek/vyuka/2020_21/nmsa407/2021-NMSA407-notes.pdf)
+2.  Продолжение, касающееся GLM и частично GEE/LMM: [Advanced Regression Models Course
+    Notes](https://www2.karlin.mff.cuni.cz/~kulich/vyuka/pokreg/doc/advreg_notes_ext_220218.pdf)     авторства Михала Кулиха.
+3.  On Multiple Comparisons in R,     [Link](http://math.furman.edu/~dcs/courses/math47/R/library/multcomp/doc/Rmc.pdf)
+4.  Simultaneous Inference in General Parametric Models,     [Link](https://cran.r-project.org/web/packages/multcomp/vignettes/generalsiminf.pdf)
+5.  Additional `multcomp` Examples, [Link](https://cran.r-project.org/web/packages/multcomp/vignettes/multcomp-examples.pdf)
+
+# Бонус. Post hocs и робастная оценка стандартных ошибок
+
+## Но я хочу доверительные интервалы! Post hoc анализ для гетероскедастичных данных.
+
+В случае гетероскедастичных данных необходимо "руками" оценить матрицу вариации-ковариации. Для этого используем библиотеку `sandwich`.
+
+запускаем ту же glht, но указываем, что берем матрицк вариации - ковариации vcov = vcovHC(model, type = ) типов несколько, указываем нужный
+
+```{r}
+library(sandwich)
+
+HBW.comp.hetero <- m1 %>%  glht(linfct = mcp(therapy = "Tukey"), 
+                                vcov = vcovHC(m1, type = "HC4"))
+```
+
+```{r}
+HBW.comp %>% summary
+HBW.comp.hetero %>% summary
+```
+в целом результаты согласуются в обоих случаях, проблема с неравенством дисперсий в наших данных не такая уж и большая
+
+## Но я хочу доверительные интервалы! Post hoc анализ для гетероскедастичных данных.
+
+```{r fig.width=15, fig.align='center'}
+par(mar = c(5, 10, 4, 2)+0.1, mfrow = c(1, 2))
+HBW.comp %>% plot(xlab = "Height difference (cm)")
+HBW.comp.hetero %>% plot(xlab = "Height difference (cm)")
+par(mar = c(5, 10, 4, 2)+0.1)
+```
+
+## Но я хочу доверительные интервалы! Post hoc анализ для гетероскедастичных данных.
+
+```{r out.extra = 'style="float:left; padding:10px"', echo=FALSE}
+par(mar = c(5, 10, 4, 2)+0.1)
+HBW.comp.hetero %>% plot(xlab = "Height difference (cm)")
+par(mar = c(5, 10, 4, 2)+0.1)
+```
+
+Для того, чтобы справиться с гетероскедастичностью, мы использовали так называемый
+sandwich estimator.
+
+**Внимание:** сендвичи имеют обыкновение сходиться к реальной дисперсии снизу. На
+маленькой выборке риск ошибки первого рода повышен!
+
+Гетероскедастичная регрессия бывает 2 типов:
+- мы знаем мультипликативную константу на которую отличаются группы - взвешенная регрессия (тогда седвич не нужен, применяют веса) когда от одного объекта по нескольку наблюдений, но их количество отличается и мы берем среднее количество проб и это будет вес
+- другой путь - сендвич. Выхода два - прикинуться, что дисперсии нормальные и проводить классическую anova / можно использовать сендвич, классический метод без поправок и сравнить p value и выбрать для себя, что больше подходит под задачу. Если эксплораторное, то выберем меньшее значение. Если конфирматорное, то наверное делаем что то не так, маленькие выборки. 
+
+Мы не можем нормально сформулировать нулевую гипотезу для манна-уитни и краскела уоллиса, не знаем, что они проверяют при каких условиях. Они отвечают, что да выборки отличаются, но чем - не известно чем. Непараметрический тест курильщика)))) Манна уитни не дает ни оценки эффекта, ни доверительного интервала.
+
+

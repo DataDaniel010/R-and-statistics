@@ -1,0 +1,32 @@
+{
+    "id": "F509DFAA",
+    "path": "C:/R/Biostat_study/Biostat_project/data/originals/stat_methods/confidence_interval.Rmd",
+    "project_path": "data/originals/stat_methods/confidence_interval.Rmd",
+    "type": "r_markdown",
+    "hash": "303154092",
+    "contents": "",
+    "dirty": false,
+    "created": 1718811494512.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "last_setup_crc32": "da3c972577e4484b",
+        "cursorPosition": "54,0",
+        "scrollLine": "6",
+        "rmdVisualMode": "true",
+        "rmdVisualWrapConfigured": "true",
+        "docOutlineVisible": "0",
+        "rmdVisualModeLocation": "2202:1352.888916015625",
+        "rmdVisualCollapsedChunks": ""
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1718911842,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1718911842841,
+    "read_only": false,
+    "read_only_alternatives": []
+}

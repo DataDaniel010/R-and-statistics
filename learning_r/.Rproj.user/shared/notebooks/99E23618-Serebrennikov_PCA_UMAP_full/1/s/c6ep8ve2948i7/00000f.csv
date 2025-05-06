@@ -1,0 +1,6 @@
+"0","library(ggfortify) "
+"0",""
+"0","autoplot(pima_clear_scaled)"
+"1","[38;5;250mScale for [32my[38;5;250m is already present.
+Adding another scale for [32my[38;5;250m, which will replace the existing scale.[39m
+"

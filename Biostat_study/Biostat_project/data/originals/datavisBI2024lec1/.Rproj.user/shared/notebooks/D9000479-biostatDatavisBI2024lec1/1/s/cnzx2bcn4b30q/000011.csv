@@ -1,0 +1,6 @@
+"0","ggplot(hogwarts) +"
+"0","  geom_point(aes(x = Herbology_exam, y = Arythmancy_exam, fill = house),"
+"0","             shape = 23,"
+"0","             size = 6.0,"
+"0","             position = position_jitter(width = 3.0, height = 2.5)) +"
+"0","  theme_minimal() -> pointPlot1"

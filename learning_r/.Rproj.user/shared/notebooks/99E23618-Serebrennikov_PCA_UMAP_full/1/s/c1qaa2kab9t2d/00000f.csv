@@ -1,0 +1,5 @@
+"0","pima_example <- pima_example %>% "
+"0","  select(mass, triceps) # Оставим только нужные нам две переменные"
+"0",""
+"0","pima.pca <- prcomp(pima_example, "
+"0","                scale = T) # Нужно ли нормировать? TRUE|FALSE. Фактически, мы могли бы подать на функцию pima_example_scaled и тогда следовало поставить scale = F, веть нормирование в том датафрейме уже сделано!"

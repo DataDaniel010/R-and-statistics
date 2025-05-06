@@ -1,0 +1,896 @@
+---
+title: "Install_Packages"
+output:
+  html_document:
+      toc: true
+      toc_float: true
+
+
+---
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      package.startup.message = FALSE
+                      )
+
+set.seed(42)
+
+```
+
+Инструкция по установке пакета для 
+"Интенсива по статистике для биологов и медиков".
+
+# Общие инструкции
+
+Чтобы сделать работу в R удобнее, мы будем использовать RStudio — бесплатную 
+интегрированную среду разработки (IDE) для R. Для скачивания RStudio на ваш компьютер, 
+перейдите по ссылке:  
+http://www.rstudio.com/products/rstudio/download/
+
+Также стоит не забыть установить сам язык R.  
+
+Рекомендуемая версия R для Windows 4.3.3    
+https://cran.r-project.org/bin/windows/base/old/4.3.3/  
+
+Рекомендуемая версия R для MacOS 4.2.1 (версия поддерживает процессоры Intel)    
+https://cran.r-project.org/bin/macosx/base/
+
+*Вы можете установить и более поздние версии R, но на них обнаружены ошибки в пакете `geomtextpath`*
+
+Также, если вы работаете в Windows, для корректной установки некоторых пакетов вам может понадобиться `rtools`.
+Актуальную для вашей версии R версию `rtools`  можно найти по ссылке:  
+https://cran.r-project.org/bin/windows/Rtools/
+
+
+# Установка всех пакетов
+
+Если Вы не хотите устанавливать пакеты по одному, вы можете выполнить код из
+следующего чанка и он установит все нужные пакеты. 
+
+*Уточнение:* если у Вас не установлены пакеты `knitr`, и `rmarkdown` и вы хотите 
+работать в rmarkdown документе, стоит заранее установить эти пакеты,  с помощью команды 
+`install.packages(c("knitr", "rmarkdown"))` в консоли или обычном скрипте R.
+
+```{r, eval = F}
+
+# Код в этом чанке установит все необходимые пакеты за один раз
+
+install.packages(
+    c("tidyverse",
+      "TrialSize",
+      "epiR",
+      "Hmisc",
+      "corrplot",
+      "readxl",
+      "broom",
+      "knitr",
+      "openxlsx",
+      "plotly",
+      "factoextra",
+      "FactoMineR",
+      "pheatmap",
+      "yardstick",
+      "dagitty",
+      "pROC", 
+      "ggpubr", 
+      "ggfortify", 
+      "ggdag", 
+      "GGally", 
+      "ggbiplot", 
+      "multcomp", 
+      "sandwich", 
+      "devtools",
+      "geomtextpath",
+      "ggExtra", 
+      "ggridges",
+      "rstatix"
+      ))
+
+```
+
+
+# tidyverse
+
+Установка семейства пакета `tidyverse`:
+
+```{r, eval = F}
+
+install.packages("tidyverse")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+beav <- beaver1
+beav$id <- 1:nrow(beaver1)
+beav <- beav %>% mutate(activ = factor(activ))
+ggplot(data = beav,
+       aes(x = id, y = temp,
+       group = activ, color = activ)) +
+       geom_line() +
+       geom_point()
+
+```
+
+Подробное описание семейства пакета `tidyverse`:  
+https://tidyverse.tidyverse.org/
+
+
+# broom
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("broom")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(broom)
+
+
+lmfit <- lm(mpg ~ wt, mtcars)
+tidy(lmfit)
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/broom/vignettes/broom.html
+
+
+# knitr
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("knitr")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(knitr)
+
+kable(head(iris))
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/knitr/knitr.pdf  
+https://yihui.org/knitr/
+
+
+# Hmisc
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("Hmisc")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(Hmisc)
+
+x1 <- rnorm(100)
+x2 <- rnorm(100)
+y <- exp(x1+x2+rnorm(100))
+f <- lm(log(y) ~ x1 + poly(x2,3), y=TRUE)
+abs.error.pred(lp=exp(fitted(f)), y=y)
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/Hmisc/Hmisc.pdf
+
+
+
+# TrialSize
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("TrialSize")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(TrialSize)
+
+DLT=c(0.01,0.014,0.025,0.056,0.177,0.594,0.963)
+Example.11.6.2<-AB.withDescalation(A=3,B=3,C=1,D=1,E=1,DLT=DLT)
+Example.11.6.2
+# Example.11.6.2[7]=0.2
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/TrialSize/TrialSize.pdf
+
+# epiR
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("epiR")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+
+library(epiR)
+
+epi.sssupc(
+    treat = 12,
+    control = 11,
+    sigma = 2,
+    delta = 0.5,
+    n = NA,
+    power = 0.8,
+    r = 1,
+    alpha = 0.05
+)
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/epiR/index.html  
+https://cran.r-project.org/web/packages/epiR/vignettes/epiR_sample_size.html
+
+# corrplot
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("corrplot")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(corrplot)
+
+## diverging colors
+par(mar = c(0, 0, 0, 0) + 0.1)
+plot(0, xlim = c(-0.1, 1), ylim = c(0, 1), type = 'n')
+col = c('RdBu', 'BrBG', 'PiYG', 'PRGn', 'PuOr', 'RdYlBu')
+for(i in 1:length(col)) {
+colorlegend(COL2(col[i]), -10:10/10, align = 'l', cex = 0.8, xlim = c(0, 1),
+ylim = c(i/length(col)-0.1, i/length(col)), vertical = FALSE)
+text(-0.01, i/length(col)-0.02, col[i], adj = 0.5, pos = 2, cex = 0.8)
+}
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/corrplot/corrplot.pdf
+
+
+
+# openxlsx
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("openxlsx")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(openxlsx)
+
+wb <- createWorkbook()
+addWorksheet(wb, sheetName = "S1")
+addWorksheet(wb, sheetName = "S2")
+addWorksheet(wb, sheetName = "S3")
+activeSheet(wb) # default value is the first sheet active
+activeSheet(wb) <- 1 ## active sheet S1
+activeSheet(wb)
+activeSheet(wb) <- "S2" ## active sheet S2
+activeSheet(wb)
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/openxlsx/openxlsx.pdf
+
+
+
+# plotly
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("plotly")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(plotly)
+
+plot_ly() %>% add_data(economics) %>% add_trace(x = ~date, y = ~pce)
+
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/plotly/plotly.pdf
+
+
+# factoextra
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("factoextra")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(factoextra)
+
+data(decathlon2)
+decathlon.active <- decathlon2[1:23, 1:10]
+res.pca <- prcomp(decathlon.active, scale = TRUE)
+fviz_pca_biplot(res.pca)
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/factoextra/factoextra.pdf
+
+
+# FactoMineR
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("FactoMineR")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(FactoMineR)
+## Example two-way anova
+data(senso)
+res <- AovSum(Score~ Product + Day , data=senso)
+res
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/FactoMineR/FactoMineR.pdf
+
+
+# pheatmap
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("pheatmap")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(pheatmap)
+# Create test matrix
+test = matrix(rnorm(200), 20, 10)
+test[1:10, seq(1, 10, 2)] = test[1:10, seq(1, 10, 2)] + 3
+test[11:20, seq(2, 10, 2)] = test[11:20, seq(2, 10, 2)] + 2
+test[15:20, seq(2, 10, 2)] = test[15:20, seq(2, 10, 2)] + 4
+colnames(test) = paste("Test", 1:10, sep = "")
+rownames(test) = paste("Gene", 1:20, sep = "")
+# Draw heatmaps
+pheatmap(test)
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/pheatmap/pheatmap.pdf
+
+
+# yardstick
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("yardstick")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(yardstick)
+library(dplyr)
+data("two_class_example")
+data("hpc_cv")
+# Two class
+accuracy(two_class_example, truth, predicted)
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/yardstick/yardstick.pdf
+
+
+# dagitty
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("dagitty")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(dagitty)
+g <- dagitty("dag{ z <- x -> y }")
+ancestorGraph( g, "z" )
+g <- dagitty("pdag{ z -- x -> y }")
+ancestorGraph( g, "y" ) # includes z
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+
+
+# pROC 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("pROC")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(pROC)
+
+data(aSAH)
+
+roc(outcome ~ s100b, aSAH)
+
+
+
+```
+
+Подробное описание пакета:  
+https://xrobin.github.io/pROC/  
+https://cran.r-project.org/web/packages/pROC/index.html
+
+
+# ggpubr 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("ggpubr")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(ggpubr)
+
+wdata = data.frame(
+   sex = factor(rep(c("F", "M"), each=200)),
+   weight = c(rnorm(200, 55), rnorm(200, 58)))
+head(wdata, 4)
+
+ggdensity(wdata, x = "weight",
+   add = "mean", rug = TRUE,
+   color = "sex", fill = "sex",
+   palette = c("#00AFBB", "#E7B800"))
+
+
+```
+
+Подробное описание пакета:  
+https://rpkgs.datanovia.com/ggpubr/  
+https://cran.r-project.org/web/packages/ggpubr/index.html
+
+# ggfortify 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("ggfortify")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(ggfortify)
+
+m <- lm(Petal.Width ~ Petal.Length, data = iris)
+
+autoplot(m, which = 1:6, ncol = 2, label.size = 3)
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/ggfortify/vignettes/basics.html  
+https://cran.r-project.org/web/packages/ggfortify/index.html
+
+
+# ggdag 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("ggdag")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(dplyr)
+library(dagitty)
+library(ggplot2)
+library(ggdag)
+
+dagify(
+  y ~ x,
+  m ~ x + y
+) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_dag_point() +
+  geom_dag_edges_arc() +
+  geom_dag_text() +
+  theme_dag()
+
+
+```
+
+Подробное описание пакета:  
+https://r-causal.github.io/ggdag/  
+
+
+# GGally 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("GGally")
+
+
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(GGally)
+
+data(flea)
+ggpairs(flea, columns = 2:4, ggplot2::aes(colour=species)) 
+
+
+```
+
+Подробное описание пакета:  
+https://ggobi.github.io/ggally/  
+https://cran.r-project.org/web/packages/GGally/index.html
+
+
+# ggbiplot 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("ggbiplot")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(ggplot2)
+library(ggbiplot)
+
+
+crime.pca <- 
+  crime |> 
+  dplyr::select(where(is.numeric)) |>
+  prcomp(scale. = TRUE)
+
+ggbiplot(crime.pca,
+         labels = crime$st ,
+         circle = TRUE,
+         varname.size = 4,
+         varname.color = "red") 
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/ggbiplot/readme/README.html
+
+# multcomp
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("multcomp")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(multcomp)
+
+data(swiss)
+
+lmod <- lm(Fertility ~ ., data = swiss)
+
+glht(lmod, linfct = c("Agriculture = 0",
+                      "Examination = 0",
+                      "Education = 0",
+                      "Catholic = 0",
+                      "Infant.Mortality = 0"))
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/multcomp/index.html  
+
+
+
+# sandwich 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("sandwich")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library("sandwich")
+
+
+data("PetersenCL", package = "sandwich")
+
+m <- lm(y ~ x, data = PetersenCL)
+
+sandwich(m)
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/sandwich/index.html  
+https://sandwich.r-forge.r-project.org/
+
+# devtools
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("devtools")
+
+```
+
+Минимальный код для проверки:
+
+*Пути к установленным пакетам и их перечень при проверке скрипта на вашем компьютере могут отличаться.*
+
+```{r}
+
+library(devtools)
+
+loaded_packages()
+
+```
+
+Подробное описание пакета:  
+https://devtools.r-lib.org/  
+
+# geomtextpath
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("geomtextpath")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(ggplot2)
+library(geomtextpath)
+
+t <- seq(5, -1, length.out = 1000) * pi
+
+spiral <- data.frame(x    = sin(t) * 1:1000, 
+                     y    = cos(t) * 1:1000,
+                     text = paste("Like a circle in a spiral,",
+                                  "like a wheel within a wheel,",
+                                  "never ending or beginning,",
+                                  "on an ever spinning reel")
+                     )
+
+ggplot(spiral, aes(x, y, label = text)) +
+  geom_textpath(size = 7, vjust = 2, text_only = TRUE) +
+  coord_equal(xlim = c(-1500, 1500), ylim = c(-1500, 1500))
+
+```
+
+Подробное описание пакета:  
+https://allancameron.github.io/geomtextpath/
+
+
+# ggExtra 
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("ggExtra")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(ggplot2)
+library(ggExtra)
+
+data(iris)
+
+piris <- ggplot(iris, aes(Sepal.Length, Sepal.Width, colour = Species)) +
+  geom_point()
+
+ggMarginal(piris, groupColour = TRUE, groupFill = TRUE)
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/ggExtra/vignettes/ggExtra.html
+
+# ggridges
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("ggridges")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(ggplot2)
+library(ggridges)
+
+data <- data.frame(x = 1:5, y = rep(1, 5), height = c(0, 1, 3, 4, 2))
+ggplot(data, aes(x, y, height = height)) + geom_ridgeline()
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html  
+https://cran.r-project.org/web/packages/ggridges/index.html
+
+# rstatix
+
+Установка пакета:
+
+```{r, eval = F}
+
+install.packages("rstatix")
+
+```
+
+Минимальный код для проверки:
+
+```{r}
+
+library(rstatix)
+library(dplyr)
+
+data("ToothGrowth")
+
+ToothGrowth %>% t_test(len ~ 1, mu = 0)
+
+
+```
+
+Подробное описание пакета:  
+https://cran.r-project.org/web/packages/rstatix/index.html  
+https://rpkgs.datanovia.com/rstatix/

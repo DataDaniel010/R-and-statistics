@@ -1,0 +1,319 @@
+---
+title: "Tasks"
+author: "Danil"
+date: "`r Sys.Date()`"
+output: word_document
+---
+First chunk
+```{r}
+
+```
+
+#Tasks stepik courses
+
+All thirds and sevenths
+```{r}
+u <- seq(0, 1, 1/3)
+m <- seq(0, 1, 1/7)
+w <- c(u, m)
+w <- sort(w)
+w <- unique(w)
+length(w)
+
+```
+1.3 Vectors
+
+```{r}
+get_fractions <- function(m, n) { <- 
+  m_v <- seq(0, 1, 1/m)
+  n_v <- seq(0, 1, 1/n)
+  total <- c(m_v, n_v)
+  total <- unique(total)
+  total <- rev(sort(total))
+  return(total)
+}
+
+```
+
+```{r}
+get_fractions(3, 7)
+```
+
+
+```{r}
+my_vector11 <- 1:51
+
+sum <- sum(my_vector11)
+
+if (sum %% 2 == 1) {
+  result <- 'odd'
+} else {
+  result <- 'even'
+}
+
+result
+```
+
+```{r}
+set.seed(1337)
+x <- runif(1e6, min = -1, max = 1)
+
+y <- x[x > -0.2 & x < 0.3]
+length(y)
+```
+```{r}
+dice_roll <- function(n) {
+  x <- runif(n)
+  ifelse(x > 5/6, 6,
+         ifelse(x > 2/3, 5,
+                ifelse(x > 1/2, 4,
+                       ifelse(x > 1/3, 3,
+                              ifelse(x > 1/6, 2, 1)))))
+}
+
+dice_roll(5)
+```
+
+```{r}
+dice_roll <- function(n) {
+  x <- sample(1:6, n, replace = T, prob = c(0.01, 0.01, 0.01, 0.01, 0.01, 0.9))
+  print(x)
+}
+
+dice_roll(5)
+
+```
+
+```{r}
+is_monotone <- function(x) {
+  diff <- x[-length(x)] - x[-1]
+  ifelse((all(diff >= 0) | all(diff <= 0)), 'TRUE', 'FALSE')
+}
+
+x <- c(0,0,3,4,4,8, 1)
+y <- rep(0, 10)
+z <- c(10, 9, 5, 5, 0, 10)
+is_monotone(z)
+
+```
+
+```{r}
+combin_count <- function(n, k, with_repetitions = F) {
+  if (with_repetitions == F) {
+    c <- factorial(n) / (factorial(k) * factorial(n - k))
+  } else {
+    c <- factorial(n + k - 1) / (factorial(k) * factorial(n - 1))
+  }
+  return(c)
+}
+
+combin_count(10, 5, T)
+
+```
+
+
+```{r}
+a <- 1:100
+a > 0
+```
+```{r}
+all <-  18 + 55 + 27
+all_p <- 4
+all / all_p
+1.96 + 0.5 + 0.16
+
+
+
+```
+```{r}
+find_closest  <- function(v, n) {
+  vect_m <- abs(v - n)
+  return(which(vect_m == min(vect_m)))
+}
+v <- c(11, 15, 9, 12, 9, 11, 111)
+n <- 10
+find_closest(v, n)
+```
+
+2.1. Matrix and lists
+```{r}
+vect <- c(5, 2, 7, 7, 7, 2, 0, 0)
+n <-  1 
+vect_b <- abs(vect - n)
+which(vect_b == min(vect_b))
+```
+```{r}
+build_ziggurat <- function(n){
+  m <- matrix(fill = 1, nrow = (2*n - 1), ncol = (2*n - 1))
+}
+
+```
+
+```{r}
+n <- 4
+
+m <- matrix(1, nrow = (2*n - 1), ncol = (2*n - 1))
+t_n <- 1:n
+r <- (2*n - 1)
+c <- (2*n - 1)
+for (i in t_n) {
+  m1 <- matrix(i, nrow = r, ncol = c)
+  m[i:r, i:c] <- m1
+  r <- r - 1
+  c <- c - 1
+}
+
+n <- 4
+m1 <- matrix(c(1:(n-1),n,(n-1):1), 2*n-1, 2*n-1)
+m2 <- t(m1)
+
+
+m1 <- matrix(2, nrow = 5, ncol = 5)
+m[2:6, 2:6] <- m1
+
+```
+
+```{r}
+m[1:2, , drop = F]
+
+```
+
+```{r}
+build_ziggurat <- function(n) {
+ m2 <- t(m1 <- matrix(c(1:(n-1),n,(n-1):1), 2*n-1, 2*n-1))
+ print((m1+m2 - abs(m1-m2))/2)
+}
+
+build_ziggurat(5)
+
+?t
+```
+
+```{r}
+#creating_vector
+creating_vector <- function(max_element, n_element, seed) {
+  set.seed(seed)
+  sample(1:max_element, n_element, rep = T)
+}
+
+
+```
+
+
+```{r}
+set.seed(42)
+vect <- sample(1:5, 20, rep = T)
+sort(unique(vect))
+v <- table(vect)
+
+
+count_elements <- function(x) {
+  uniq <- sort(unique(x))
+  freq <- table(x)
+  m1 <- matrix(uniq, 1, length(uniq))
+  m2 <- matrix(freq, 1, length(freq))
+  rbind(m1, m2)
+}
+
+count_elements(vect)
+
+```
+```{r}
+set.seed(1789)
+bastille <- list(
+  "La Chapelle Tower" = rbinom(5, 10, 1/2), 
+  "Tresor Tower" = rbinom(8, 12, 1/4), 
+  "Comte Tower" = rbinom(14, 3, 1/5) + 1,
+  "Baziniere Tower" = rbinom(8, 4, 4/5), 
+  "Bertaudiere Tower" = rbinom(4, 8, 2/3),
+  "Liberte Tower" = rbinom(1, 100, 0.1), 
+  "Puits Tower" = rbinom(5, 5, 0.7),
+  "Coin Tower" = rbinom(3, 16, 0.4)
+)
+
+vector_tow <- c(sum(bastille$La), sum(bastille$Tresor), sum(bastille$Comte), sum(bastille$Bazin), sum(bastille$Berta), sum(bastille$Liber), sum(bastille$`Puits Tower`), sum(bastille$`Coin Tower`))
+
+which.min(vector_tow)
+
+
+vec <- unlist(bastille)
+sum(bastille$Liber)
+sum(vec)
+
+
+sum(sapply(bastille, sum))
+bastille[names(which.min(sapply(bastille, sum)))]
+
+bastille[names(bastille)]
+```
+
+
+```{r}
+l <- list(1, 11, 151)
+
+a <- rbinom(5, 10, 1/2)
+sum(a)
+```
+```{r}
+b <- rbind(c(1, 2), c(3, 4))
+typeof(b)
+```
+```{r}
+NA_position <- function(x, y) {
+  all(is.na(x) == is.na(y))
+}
+
+```
+
+
+```{r}
+as.matrix(df)
+```
+```{r}
+data <-  attitude
+rev(sort(data$learning))
+data_1 <- subset(data, learning > 69, select = c(complaints, raises, advance))
+
+sum_v <- c("15" = sum(data_1[1, ]), "16" = sum(data_1[2, ]), '18' = sum(data_1[3, ]), '27' = sum(data_1[4, ]), '29' = sum(data_1[5, ]))
+which.max(sum_v)
+
+
+```
+
+```{r}
+data <- attitude
+View(data)
+subset(data, rating < 50, -rating)
+
+subset(sel = -rating, sub = rating < 50, attitude)
+
+attitude[attitude$rating < 50, names(attitude) != "rating"]
+
+
+```
+
+```{r}
+data_q <- quakes
+View(data_q)
+?quakes
+
+max(data_q$mag)
+mean(data_q$depth)
+tail(data_q)
+head(data_q)
+median(data_q$depth)
+min(data_q$mag)
+
+data_q %>% 
+  #slice_min(mag) %>% 
+  head() 
+
+
+
+  
+
+
+```
+
+
+

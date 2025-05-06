@@ -1,0 +1,262 @@
+---
+title: "Hypothesis testing"
+author: "Evgeny Bakin"
+date: '2024-06-12'
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+```
+
+# Эксперимент №1: равенство средних
+
+Три способа проверить стат значимость (все три метода желательно должны давать один и тот же результат):
+
+ДИ, который мы тут ловим показывает разницу в средних между группами. Получили, что ДИ отличен от нуля, скорее всего группы не равны.
+
+t \> 6 - большое получается, означает, что степень расхождения выборок с нулевой гипотезой большая.
+
+р \< 0.05 значительно, результат значимый р и t пересчитываются одно в другое, поэтому вместе их приводить не нужно, но вот
+
+р и ДИ стоит приводить вместе - ДИ - клиническая существенность различий, р - статистическая значимость.
+
+```{r exp_1}
+
+sample_size <- 30
+
+glucoze_A <- rnorm(sample_size, 
+                   mean = 5, 
+                   sd = 0.3) # Глюкоза в группе А
+
+glucoze_B <- rnorm(sample_size, 
+                   mean = 4.5, 
+                   sd = 0.3) # Глюкоза в группе Б
+
+t.test(glucoze_A,
+       glucoze_B)
+
+```
+
+## Tidy-style
+
+помещаем данные в дата фрейм - один столбец это arm (или группа), другой - глюкоза, потом создаем trial_results и в нем уже прогоняем t.test по столбцам дата фрейма.
+
+```{r exp_11}
+
+df_trial <- data.frame(
+  arm = c(rep('A',sample_size), rep('B', sample_size)),
+  glucoze = c(glucoze_A, glucoze_B)
+)
+
+trial_results <- df_trial %>% 
+  t.test(glucoze ~ arm, conf.level = 0.95, data = .) %>% 
+  broom::tidy() 
+
+```
+
+## t-статистика и p-значения
+
+t-test с поправкой Уэлча - используется по дефолту.
+
+Доверительный интервал строится только под какую то определенную ошибку первого рода, а p можно сравнивать с любым уровнем значимости необходимым.
+
+Когда р маленькое statistic (t value) большое, если p большое, то statistic около нуля. Как проверить гипотезу при помощи statistic критерия - нужно выбрать границы а и b, так чтобы вероятность вылета за эти границы была равно 0,05, для этого строим гистограмму значений статистики. На гистограмме показаны значения статистики критерия, когда нулевая гипотеза верна. На гистограмме - распределение стьюдента. Границы критической области должны считаться не через нормальное распределение, а через распределение стьюдента
+
+Можем посчитать границы критической области в данном случае можем посчитать через квантили распределения стьюдента. функция qt(0.025 или 0.975, df = sample_size - 1)
+
+Чем больше объем выборки тем ближе t распределение к нормальному.
+
+```{r exp_12}
+
+num_exp <- 1000 # Сколько проводим экспериментов?
+
+sample_size <- 3 # Количество пациентов, прошедших, терапию это и группа А и группа B
+
+Hg_improve <- 15 # Истинное среднее изменение уровня Hg (в ГЕНЕРАЛЬНОЙ СОВОКУПНОСТИ) также и в группе А и в группе В
+Hg_sd <- 10 # Разброс в улучшении Hg
+
+df_trial <- data.frame(
+  exp_ID = rep(1:num_exp, each = 2*sample_size),
+  arm = rep(c(rep('A', sample_size), rep('B', sample_size)), num_exp),
+  patient_ID = rep(1:(2*sample_size), num_exp),
+  Hg_change = rnorm(2*sample_size*num_exp, mean = Hg_improve, sd = Hg_sd)
+)
+
+trial_results <- df_trial %>% 
+  group_by(exp_ID) %>% 
+  nest() %>% 
+  mutate(est_results = purrr::map(data, ~t.test(Hg_change ~ arm, conf.level = 0.95, data = .))) %>% 
+  mutate(vector_est_results = purrr::map(est_results, ~ broom::tidy(.))) %>% 
+  dplyr::select(-c(data,est_results)) %>% 
+  unnest(vector_est_results) %>% 
+  mutate(CI_width = conf.high - conf.low) %>% 
+  mutate(out = ifelse((0 < conf.high) & (0 > conf.low), 'ok', 'missed')) #missed - доверительный интервал не накрыл ноль
+
+hist(trial_results$statistic, 30)
+
+sum(abs(trial_results$p.value) < 0.05)/num_exp #число ошибок первого рода, когда считали с помощью p
+
+sum(trial_results$out == "missed")/num_exp #число ошибок первого рода, когда считал через ДИ
+
+lower_bound_critical <- qt(0.025, df = sample_size - 1)
+upper_bound_critical <-  qt(0.975, df = sample_size - 1)
+
+sum(trial_results$statistic > upper_bound_critical | trial_results$statistic < lower_bound_critical)/num_exp 
+
+
+```
+
+## Ненормальное распределение
+
+распределение здесь экспоненциальное. Если распределение не нормальное, то на малых выборках у нас ошибка первого рода будет меньше 0,05, на больших приближается к 0,05. Маленькая ошибка первого рода приводит к тому, что увелчивается ошибка второго рода и снижается мощность метода. Ненароком будем пропускать значимые результаты. Лучше не верить t тесту на малых выборках, если не знаем точно, что распределение нормальное. На больших выборках уже все норм.
+
+Есть распределение Каши там никогда не будет работать t тест.
+
+На малых выборках снижается мощность исследования, плохая ошибка второго рода. Если выборка 10-20 то можно поработать с помощью бутстрепа.
+
+```{r exp_13}
+
+num_exp <- 1000  # Сколько проводим экспериментов?
+
+sample_size <- 10 # Количество пациентов, прошедших, терапию
+
+df_trial <- data.frame(
+  exp_ID = rep(1:num_exp, each = 2*sample_size),
+  arm = rep(c(rep('A', sample_size), rep('B', sample_size)), num_exp),
+  patient_ID = rep(1:(2*sample_size), num_exp),
+  Hg_change = rexp(2*sample_size*num_exp, rate = 1/Hg_improve)
+)
+
+trial_results <- df_trial %>% 
+  group_by(exp_ID) %>% 
+  nest() %>% 
+  mutate(est_results = purrr::map(data, ~t.test(Hg_change ~ arm, conf.level = 0.95, data = .))) %>% 
+  mutate(vector_est_results = purrr::map(est_results, ~ broom::tidy(.))) %>% 
+  dplyr::select(-c(data,est_results)) %>% 
+  unnest(vector_est_results) %>% 
+  mutate(CI_width = conf.high - conf.low) %>% 
+  mutate(out = ifelse((0 < conf.high) & (0 > conf.low), 'ok', 'missed'))
+
+sum(abs(trial_results$p.value) < 0.05)/num_exp
+
+sum(trial_results$out == "missed")/num_exp
+
+
+```
+
+# Эксперимент №2: вероятностное доминирование
+
+Вместо t.test пишем wilcox.test(sample1, sample2)
+
+```{r exp_2}
+
+sample_size <- 30
+
+glucoze_A <- rnorm(sample_size, 
+                   mean = 8, 
+                   sd = 1) # Глюкоза в группе А
+
+glucoze_B <- rnorm(sample_size, 
+                   mean = 8, 
+                   sd = 1) # Глюкоза в группе Б
+
+wilcox.test(glucoze_A,
+            glucoze_B)
+
+```
+
+## Ненормальное распределение
+
+Для ненормальных распределений тест Манна-Уитни лучше выдерживает ошибку первого рода, чем t тест. Но они по разному сравнивают выборки, разные гипотезы проверяют
+
+```{r}
+
+num_exp <- 1000 # Сколько проводим экспериментов?
+
+sample_size <- 50 # Количество пациентов, прошедших, терапию
+
+df_trial <- data.frame(
+  exp_ID = rep(1:num_exp, each = 2*sample_size),
+  arm = rep(c(rep('A', sample_size), rep('B', sample_size)), num_exp),
+  patient_ID = rep(1:(2*sample_size), num_exp),
+  Hg_change = rexp(2*sample_size*num_exp, rate = 1/Hg_improve)
+)
+
+trial_results <- df_trial %>% 
+  group_by(exp_ID) %>% 
+  nest() %>% 
+  mutate(est_results = purrr::map(data, ~wilcox.test(Hg_change ~ arm, conf.level = 0.95, data = .))) %>% 
+  mutate(vector_est_results = purrr::map(est_results, ~ broom::tidy(.))) %>% 
+  dplyr::select(-c(data,est_results)) %>% 
+  unnest(vector_est_results)
+
+sum(abs(trial_results$p.value) < 0.05)/num_exp
+
+```
+
+## Перекос в диспериях
+
+о том как работает МИ. Тут перекос в дисперсии, как будет себя вести тест МИ
+
+```{r wilcox_disp}
+
+num_exp <- 1000  # Сколько проводим экспериментов?
+
+sample_size <- 30 # Количество пациентов, прошедших, терапию
+
+df_trial <- data.frame(
+  exp_ID = rep(1:num_exp, each = 2*sample_size),
+  arm = rep(c(rep('A', sample_size), rep('B', sample_size)), num_exp),
+  patient_ID = rep(1:(2*sample_size), num_exp)
+) %>% 
+  rowwise() %>% 
+  mutate(Hg_change = ifelse(
+    arm == 'A', rnorm(1, Hg_improve, Hg_sd), rnorm(1, Hg_improve, 10*Hg_sd)
+  )) %>% 
+  ungroup()
+
+ggplot(df_trial, aes(x = Hg_change, color = arm)) +
+  geom_density() +
+  theme_bw()
+  
+trial_results <- df_trial %>% 
+  group_by(exp_ID) %>% 
+  nest() %>% 
+  mutate(est_results = purrr::map(data, ~wilcox.test(Hg_change ~ arm, conf.level = 0.95, data = .))) %>% 
+  mutate(vector_est_results = purrr::map(est_results, ~ broom::tidy(.))) %>% 
+  dplyr::select(-c(data,est_results)) %>% 
+  unnest(vector_est_results)
+
+sum(abs(trial_results$p.value) < 0.05)/num_exp
+
+```
+
+# Эксперимент №3: таблицы сопряженности
+
+формируются таблицы сопряженности случайным образом и сравнивается тест фишера и тест хи-квадрат
+
+```{r exp_3}
+
+sample_size <- 80
+ID_therapy <- c(rep("Therapy_A",sample_size), 
+                rep("Therapy_B",sample_size))
+
+Outcome <- c(rbinom(sample_size,1,0.5), 
+             rbinom(sample_size,1,0.8))
+# Подготовка таблицы сопряженности:
+sample <- matrix(c(ID_therapy,Outcome),ncol=2)
+
+compact_form <- table(sample[,1],sample[,2])
+
+contigency_table <- as.matrix(compact_form)
+
+print(contigency_table)
+# Сравниваем 2 теста:
+fisher.test(contigency_table)
+chisq.test(contigency_table)
+
+```

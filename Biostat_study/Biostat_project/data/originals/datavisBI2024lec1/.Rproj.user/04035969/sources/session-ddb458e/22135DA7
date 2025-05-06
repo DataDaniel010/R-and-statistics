@@ -1,0 +1,32 @@
+{
+    "id": "22135DA7",
+    "path": "C:/R/Biostat_study/Biostat_project/data/originals/datavisBI2024lec1/biostatDatavisBI2024lec1.rmd",
+    "project_path": "biostatDatavisBI2024lec1.rmd",
+    "type": "r_markdown",
+    "hash": "3436290232",
+    "contents": "",
+    "dirty": false,
+    "created": 1718459290611.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "rmdVisualMode": "true",
+        "rmdVisualWrapConfigured": "true",
+        "docOutlineVisible": "1",
+        "rmdVisualCollapsedChunks": "",
+        "rmdVisualModeLocation": "13723:19103.111328125",
+        "last_setup_crc32": "ddb458e8908cc5b",
+        "cursorPosition": "422,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1718811820,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1718811820766,
+    "read_only": false,
+    "read_only_alternatives": []
+}

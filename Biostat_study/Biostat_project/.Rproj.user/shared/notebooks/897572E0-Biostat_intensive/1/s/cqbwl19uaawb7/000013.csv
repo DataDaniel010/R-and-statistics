@@ -1,0 +1,3 @@
+"0","original_data %>%"
+"0","  select(where(is.numeric)) %>%"
+"0","  select(where(function(x) mean(x, na.rm = TRUE) > 50))"

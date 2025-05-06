@@ -1,0 +1,195 @@
+---
+title: "Practice"
+author: "Danil Tukanov"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+
+library(flextable)
+library(gtsummary) 
+
+library(ggplot2)
+
+```
+
+```{r}
+help.start()
+install.packages("vcd")
+help(package="vcg")
+library(vcd)
+help("Arthritis")
+example(Arthritis)
+```
+
+
+Генерируем две случайные величины
+```{r}
+?rnorm
+set.seed(10)
+x <- rnorm(20)
+y <- rnorm(20)
+```
+
+
+```{r}
+states <- read_csv('data/raw/states.csv')
+View(states)
+```
+
+
+```{r}
+ggplot(states, aes(x = hs_grad, y = poverty)) +
+  geom_point()
+
+```
+Можно использовать регрессионный анализ. Предиктор - уровень образования, зависимая переменная - бедность.
+
+1. Строим регрессионную модель - уравнение регрессионной прямой (найти коэффициенты b0 и b1)
+2. Построив модель хотим выяснить насколько хорошо модель объясняет поведение зависимой переменной - находим коэффициент детерминации - какой процент дисперсии объясняется нашей моделью, далее отвечаем на вопрос отличается ли коэфф b1 от нуля - это и будет наша нулевая гипотеза на языке регрессионного анализа. 
+3. Задача предсказания - посмотрим как на данных независимой переменной можно предсказать чему будет равна зависимая переменная. 
+
+
+хи-квадрат
+```{r}
+observed <- c(10,10, 10, 5, 10, 15)
+expected <- c(10, 10, 10, 10, 10, 10)
+dataf <- data.frame(observed, expected)
+
+chisq.test(c(795, 705))
+
+
+men <- c(20, 11, 7)
+women <- c(15, 12, 9)
+table_t <- cbind(men, women)
+chisq.test(table_t)
+
+
+
+no <- c(18, 7)
+yes <- c(6, 13)
+names <- c('Aspirin', 'Placebo')
+patients <- rbind(no, yes)
+chisq.test(patients)
+chisq.test(patients)$observed
+chisq.test(patients)$expected
+mosaicplot(patients, color = T, shade = T, ylab = 'Thrombosis', xlab <- 'Group', cex.axis = 1, main = '')
+```
+Работа по диссертации
+```{r}
+library(plotrix)
+mydata <- data.frame(glucose=numeric(0), Hba1c=numeric(0))
+mydata <- edit(mydata)
+mean(mydata$glucose)
+mean(mydata$Hba1c)
+std.error(mydata$glucose)
+std.error(mydata$Hba1c)
+
+mydata %>% 
+  slice(21:40) -> mydata_t2d
+
+mean(mydata_t2d$glucose)
+mean(mydata_t2d$Hba1c)
+std.error(mydata_t2d$glucose)
+std.error(mydata_t2d$Hba1c)
+
+diabetes_type <- mydata$diabetes
+glucose <- mydata$glucose
+hem <- mydata$Hba1c
+
+res_glucose <- wilcox.test(glucose~diabetes_type, data = mydata, exact = F)
+res_hem <- wilcox.test(hem~diabetes_type, data = mydata, exact = F)
+
+
+
+```
+Logical operators and conditional statements
+```{r}
+da <- data('airquality')
+View(airquality)
+airquality[, 'Solar.R'] > 150 & airquality[, 'Wind'] > 10
+airquality[, 'Day'] != 1
+airquality %>%
+  glimpse %>% 
+  #filter(Solar.R > 150 & Wind > 10) %>% 
+  #filter(Solar.R > 150 | Wind > 10) %>% 
+  #filter(Day != 1) %>% 
+  filter(!(Solar.R > 150 | Wind > 10))
+
+
+
+
+```
+
+
+```{r}
+mtcars <- as_tibble(mtcars)
+mtcars
+View(mtcars)
+```
+
+
+*Статистическая практика в R*
+Хи-квадрат, фишер, пирсон, таблицы сопряженности
+Задача 1
+```{r}
+#функция принимает на вход дф с двумя номинативными переменными с произвольным числом градаций Функция должна проверять гипотезу о независимости этих двух переменных при помощи критерия хи - квадрат или точного критерия Фишера. Если хотя бы в одной ячейке таблицы сопряженности двух переменных меньше 5 наблюдений, функция должна рассчитывать точный критерий Фишера и возвращать вектор из одного элемента: получившегося p - уровня значимости. Если наблюдений достаточно для расчета хи-квадрат (во всех ячейках больше либо равно 5 наблюдений), тогда функция должна применять критерий хи-квадрат и возвращать вектор из трех элементов: значение хи-квадрат, число степеней свободы,  p-уровня значимости.
+smart_test <- function(x) {
+  data <- table(x[, 1:2])
+  if (all(data > 5)) {
+    vec <- c(chisq.test(data)$statistic, chisq.test(data)$parameter, chisq.test(data)$p.value)
+    return (vec)
+  }
+  else {
+    vec <- fisher.test(data)$p.value
+    return (vec)
+  }
+}
+
+smart_test <- function(test_data){
+	test_table <- table(test_data) 
+	if (min(test_table) < 5){        
+		fit  <- fisher.test(test_table)        
+		result  <- fit$p.value      
+	} else {        
+		fit  <- chisq.test(test_table)        
+		result  <- c(fit$statistic, fit$parameter, fit$p.value)        
+	}        
+	return(result)        
+}
+
+table(mtcars$am, mtcars$vs)
+table(mtcars[, c('am', 'vs')])
+smart_test(mtcars[, c("am", "vs")])
+```
+Задача 2
+Почувствуй себя биоинформатиком!  Вся наследственная информация в живых организмах хранится внутри молекулы ДНК. Эта молекула состоит из последовательности четырех "букв" — A, T, G и C. 
+Напишите функцию most_significant, которая получает на вход dataframe с произвольным количеством переменных, где каждая переменная это нуклеотидная последовательность. 
+Cкачайте тестовый набор данных (смотри ниже), чтобы познакомиться с их структурой, на которых будет тестироваться ваша функция. Рассмотрим пример, всего-лишь с несколькими наблюдениями, чтобы прояснить суть задачи:
+
+
+```{r}
+most_significant <- function(test_data)
+  
+```
+
+
+
+```{r}
+data <- table(mtcars[1:2])
+
+any(data < 5)
+```
+
+```{r}
+min(table(c(1, 2, 1, 3, 1, 2, 5, 11, 5, 2, 3, 2, 3, 2, 2, 11)))
+
+```
+
+
+

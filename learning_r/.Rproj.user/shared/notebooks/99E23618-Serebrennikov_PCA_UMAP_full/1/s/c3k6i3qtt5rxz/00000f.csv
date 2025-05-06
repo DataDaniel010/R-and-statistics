@@ -1,0 +1,4 @@
+"0","ggplot() +"
+"0","  geom_point(data = pima.pca$x, # Новые переменные лежат здесь"
+"0","             aes(x = PC1, y = PC2)) +"
+"0","  theme_minimal() "

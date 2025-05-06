@@ -1,0 +1,11 @@
+"0","library(ggpubr)
+"
+"2","
+Присоединяю пакет: ‘ggpubr’
+
+"
+"2","Следующие объекты скрыты от ‘package:flextable’:
+
+    border, font, rotate
+
+"

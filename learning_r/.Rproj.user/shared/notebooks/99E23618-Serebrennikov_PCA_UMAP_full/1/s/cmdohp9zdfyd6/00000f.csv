@@ -1,0 +1,3 @@
+"0","ggplot() +"
+"0","  geom_point(data = pima_example, aes(x = mass, y = triceps)) + "
+"0","  theme_minimal() "

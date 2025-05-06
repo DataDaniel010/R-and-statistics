@@ -1,0 +1,2 @@
+"0","original_data %>% "
+"0","  select(where(is.character))"

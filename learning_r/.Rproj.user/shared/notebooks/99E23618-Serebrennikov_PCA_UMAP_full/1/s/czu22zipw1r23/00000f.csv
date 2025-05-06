@@ -1,0 +1,2 @@
+"0","pima_example <- pima_example %>% "
+"0","  mutate(pc1 = mass + triceps) # Создаем первую главную компоненту"

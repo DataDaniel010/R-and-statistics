@@ -1,0 +1,2 @@
+"0","# Загрузим библиотеку"
+"0","library(ggbiplot) # devtools::install_github(""vqv/ggbiplot"")"

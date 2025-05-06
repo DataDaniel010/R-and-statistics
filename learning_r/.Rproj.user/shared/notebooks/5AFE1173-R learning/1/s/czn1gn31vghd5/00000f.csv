@@ -1,0 +1,18 @@
+"0","original_data %>% 
+  select(hypertension) %>% 
+  map(table)
+"
+"1","$hypertension
+"
+"1","
+"
+"1","   0 "
+"1","   1 "
+"1","
+"
+"1","4612 "
+"1"," 498 "
+"1","
+"
+"1","
+"

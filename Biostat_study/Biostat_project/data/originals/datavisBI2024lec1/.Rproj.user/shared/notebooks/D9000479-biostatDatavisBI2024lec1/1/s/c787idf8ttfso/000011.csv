@@ -1,0 +1,8 @@
+"0","ggplot(hogwarts) +"
+"0","  geom_boxplot(aes(x = sex, y = Herbology_exam, fill = blood_status),"
+"0","               width = 0.4,"
+"0","               outliers = F) + "
+"0","  geom_jitter(aes(x = sex, y = Herbology_exam),"
+"0","              size = 3,"
+"0","              width = 0.2) +"
+"0","  theme_light()"

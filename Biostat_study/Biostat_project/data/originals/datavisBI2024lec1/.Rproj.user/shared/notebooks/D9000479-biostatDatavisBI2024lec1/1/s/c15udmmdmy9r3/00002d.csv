@@ -1,0 +1,8 @@
+"0","set.seed(100)"
+"0",""
+"0","ggplot(hogwarts, aes(x = house, y = result)) + "
+"0","  geom_boxplot(aes(fill = house),"
+"0","               width = 0.3,"
+"0","               outliers = F) +"
+"0","  geom_jitter(width = 0.2,"
+"0","              size = 3)"

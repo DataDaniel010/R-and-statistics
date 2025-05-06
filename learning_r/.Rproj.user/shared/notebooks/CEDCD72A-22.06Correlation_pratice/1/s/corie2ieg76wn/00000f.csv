@@ -1,0 +1,3 @@
+"0",""
+"0","pima <- readxl::read_xlsx(""pima.xlsx"")"
+"0",""

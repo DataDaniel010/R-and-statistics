@@ -1,0 +1,9 @@
+"0",""
+"0","pima_corrected %>% "
+"0","    ggplot(aes(x = mass, y = pressure)) + "
+"0","    geom_point(size = 1.1) + "
+"0","    theme_bw()"
+"2","Предупреждение:"
+"2"," [38;5;250mRemoved 39 rows containing missing values or values outside the scale range
+(`geom_point()`).[39m
+"

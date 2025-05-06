@@ -1,0 +1,8 @@
+"0","pointPlot1 +"
+"0","  annotate(""rect"", xmin = 20, xmax = 40, ymin = 50, ymax = 70, "
+"0","           alpha = 0.4, fill = ""lightblue"") +"
+"0","  annotate(""segment"", x = 92, xend = 97, y = 100, yend = 100, "
+"0","           size = 3, arrow = arrow()) +"
+"0","  annotate(""text"", x = 85, y = 100,"
+"0","           size = 8, colour = ""red"","
+"0","           label = ""Dickhead"")"

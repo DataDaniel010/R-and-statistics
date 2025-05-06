@@ -1,0 +1,25 @@
+"0","knitr::opts_chunk$set(echo = TRUE)"
+"0",""
+"0",""
+"0","library(dplyr)"
+"0","library(tidyr)"
+"0","library(kableExtra)"
+"2","
+Присоединяю пакет: ‘kableExtra’
+
+"
+"2","Следующие объекты скрыты от ‘package:flextable’:
+
+    as_image, footnote
+
+"
+"2","Следующий объект скрыт от ‘package:dplyr’:
+
+    group_rows
+
+"
+"0","library(mvtnorm)"
+"0","library(ggplot2)"
+"0","library(purrr)"
+"0",""
+"0","#source(""scratches.R"")"

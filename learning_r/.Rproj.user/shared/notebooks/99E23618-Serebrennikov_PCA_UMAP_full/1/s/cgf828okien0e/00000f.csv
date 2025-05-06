@@ -1,0 +1,3 @@
+"0","ggbiplot(pima_full.pca, "
+"0","         scale=0, alpha = 0.1) + "
+"0","  theme_minimal()"

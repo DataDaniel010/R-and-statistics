@@ -1,0 +1,7 @@
+"0","ggplot(hogwarts) +"
+"0","  geom_histogram(aes(x = result),"
+"0","                 fill = 'maroon',"
+"0","                 colour = ""black"","
+"0","                 bins = 15) +"
+"0","  theme_bw()"
+"0",""

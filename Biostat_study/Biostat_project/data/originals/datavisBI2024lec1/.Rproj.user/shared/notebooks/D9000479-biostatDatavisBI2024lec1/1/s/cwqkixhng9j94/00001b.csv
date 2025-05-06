@@ -1,0 +1,5 @@
+"0","ggplot(hogwarts) +"
+"0","  geom_bar(aes(x = house, fill = sex),"
+"0","           position = ""fill"") +"
+"0","  scale_y_continuous(breaks = seq(0.00, 1.00, l = 21)) +"
+"0","  theme_classic()"

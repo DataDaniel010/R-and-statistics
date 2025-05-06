@@ -1,0 +1,8 @@
+"0","ggbiplot(pima_full.pca, "
+"0","         scale=0, "
+"0","         groups = as.factor(pima_clear_with_ch$age_group), "
+"0","         ellipse = T,"
+"0","         alpha = 0.2) +"
+"0","  theme_minimal()"
+"1","[38;5;250mToo few points to calculate an ellipse[39m
+"

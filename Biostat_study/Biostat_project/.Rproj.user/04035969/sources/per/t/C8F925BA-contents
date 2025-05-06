@@ -1,0 +1,469 @@
+---
+title: "Biostatistics_project"
+author: "Danil"
+date: "2024-06-01"
+output: word_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+
+library(flextable)
+library(gtsummary) 
+
+```
+# First
+Первый чанг самый важный, с него начинается выполнение всех кодов. В этом чанге мы
+определяем как некоторые параметры выполнения rmarkdown документа, записываем все
+библиотеки, которые используем. Определяем тут же все самописные функции, которые
+будем использовать. **Жирный шрифт**. *Курсив* 
+Пакеты могут иметь одинаковые названия функции, поэтому R использует функции (с одинаковым названием) из последнего пакета.
+
+## Studying tidyverse
+
+### Чтение данных
+можно добавить аргумент delim = "sign"
+обычный csv - разделитель запятая
+csv2 разделитель - ;
+```{r}
+
+iris_csv <- read_csv('data/raw/iris_csv.csv')
+
+iris_csv <- read_csv2('data/raw/iris_csv2.csv')
+
+iris_excel <- read_excel("data/raw/iris_xlsx.xlsx")
+
+iris_txt <- read_delim("data/raw/iris_txt.txt")
+
+```
+
+### Writing of data
+записали данные, слева переменная, справа путь до нового файла
+```{r}
+write_csv(iris_csv, "data/interim/iris_csv.csv")
+
+write_csv2(iris_csv, "data/interim/iris_csv2.csv")
+
+```
+
+
+### Описание данных, создание статотчета
+```{r}
+
+original_data <- read_csv("data/raw/healthcare-dataset-stroke-data.csv")
+
+```
+
+Смотрим на данные немного по-другому:
+берем данные, потом по конвееру двигаются между функциями, соединяемых пайпами %>% 
+мы подали датасет на вход функции glimpse() и собираем пайплайн
+```{r}
+
+original_data %>%
+  glimpse() 
+  # another_fun() %>%
+```
+Получаем саммари по данным, но некоторые переменные могут считаться как строки, да и получаемые данные очень поверхностные
+```{r}
+
+original_data %>%
+  summary()
+
+
+```
+
+Посмотреть структуру данных - данные по всем переменным и тд
+```{r}
+str(original_data)
+
+```
+
+
+### Select
+важная функция в tydiverse
+она выбирает переменные таблицы
+и можем их присваивать к нашим переменным, чтобы с ними работать
+можно присваивать вправо ->
+
+```{r}
+
+original_data %>% 
+  select(bmi)
+
+```
+
+```{r}
+
+original_data %>% 
+  select(id, gender, bmi) -> new_data
+
+new_data_left <- original_data %>% 
+  select(id, gender, bmi)
+
+```
+
+вывести колонки
+
+```{r}
+original_data %>% 
+  select(age, stroke, work_type)
+
+```
+выводим только количественные данные
+```{r}
+
+original_data %>% 
+  select(where(is.numeric))
+
+```
+выводим только не количественные
+```{r}
+
+original_data %>% 
+  select(!where(is.numeric))
+
+```
+вывести все переменные строкового типа
+```{r}
+original_data %>% 
+  select(where(is.character))
+
+```
+
+Выбираем переменные в таблице, которые начинаются с определенных символов
+```{r}
+
+original_data %>% 
+  select(starts_with("ever_"))
+
+```
+
+```{r}
+
+original_data %>% 
+  select(!starts_with("ever_"))
+
+```
+Выбираем переменные в таблице, которые заканчиваются на определенные символы
+```{r}
+original_data %>% 
+  select(ends_with("e"))
+
+```
+
+Выбираем переменные в таблице, которые содержат определенные символы
+```{r}
+original_data %>% 
+  select(contains("_"))
+```
+
+Можем объединять условия
+```{r}
+
+original_data %>% 
+  select(contains("_") & where(is.numeric))
+
+```
+
+
+переименовали переменную, чтобы называть красиво с пробелом нужно ставить апострофы. Но оригинальные данные не перезаписываются, так как мы не присваиваем их новой переменной.
+```{r}
+
+original_data %>% 
+  select('Group variable' = stroke, where(is.character) & !contains("_"))
+
+
+```
+Выводим данные, у которых среднее значение больше, чем 50
+Сначала выбираем все числовые переменные, потом уже функцию пишем
+чтобы не было ошибок оборачиваем в функцию обертку where
+na.rm = TRUE - убираем все NA иначе при выполнении mean вернется NA. Тк function(x) - то выбираются все переменные числовые и отсеиваются по условию
+```{r}
+original_data %>%
+  select(where(is.numeric)) %>%
+  select(where(function(x) mean(x, na.rm = TRUE) > 50))
+```
+
+Выбираем только те переменные в значениях которых есть буква r
+Функция однострочник рассматривает каждый столбец как отдельный вектор, применяется к нему и если после применения результат true, то она выведет нам. Пишем any - если хотя бы одно значение TRUE то выведется TRUE. all - выводит TRUE если ВСЕ значения TRUE
+str_detect позволяет искать подстроку в векторе из строк
+как можно посмотреть какие есть значения:
+map(table, useNA = "Always"). Так можно удобно отлавливать ошибки заполнения, которые есть в данных
+```{r}
+original_data %>%
+  select(where(function(x) any(str_detect(x, "r")))) %>%
+  map(table, useNA = "always")
+
+```
+map вообще последовательно применяет какую либо функцию
+
+### Filter
+Фильтр по строкам, можем выбирать условия (по переменным) по которым эти строки фильтруются
+Выбираем всех мужчин:
+```{r}
+
+original_data %>% 
+  filter(gender == "Male")
+
+```
+
+Выбираем не мужчин
+```{r}
+
+original_data %>% 
+  filter(gender != "Male")
+
+```
+
+Выбираем возраст меньше 70 и инсульт
+```{r}
+
+original_data %>% 
+  filter(age < 70 & stroke == 1)
+
+```
+
+
+```{r}
+original_data %>% 
+  filter(gender == "Male" & age < 50)
+
+
+```
+
+Выбираем диапазон включая границы интервала с использованием функции between
+```{r}
+
+original_data %>% 
+  filter(between(age, 20, 30))
+
+```
+%in% - говорим, что значения категориальной переменной должны входить в определенное подмножество (указываем вектор диапазона)
+Значения work_type должны удовлетворять хотя бы одному из указанных значений вектора
+```{r}
+
+original_data %>% 
+  filter(work_type %in% c("Private", "Self-employed"))
+
+```
+
+отрицание (добавили скобки)
+```{r}
+
+original_data %>% 
+  filter(!(work_type %in% c("Private", "Self-employed")))
+
+```
+
+###Slice
+можем не только фильтровать данные по значениям, но и брать sample из данных
+фильтровать данные по номерам строк
+```{r}
+original_data %>%
+  slice(1000) #взяли тысячную строку
+
+```
+берем данные по номерам строк 1000:1100 (границы включены)
+```{r}
+original_data %>% 
+  slice(1000:1100)
+
+```
+
+берем случайные строки (каждый раз, это называется новый seed) - таким образом формируем подвыборку slice_sample:
+```{r}
+original_data %>% 
+  slice_sample(n = 100)
+
+
+```
+
+фиксируем set.seed(num), чтобы не было случайных строк:
+seed, который использовали лучше где нибудь зафиксировать
+можем использовать не только n = , можно использовать пропорцию
+```{r}
+set.seed(1202)
+
+original_data %>% 
+  #slice_sample(n = 100)
+  #или
+  slice_sample(prop = 0.3) #берем 30 процентов строк
+  
+```
+
+берем строки, которые имеют минимальное значение по возрасту:
+```{r}
+
+original_data %>% 
+  slice_min(age)
+
+```
+берем слайс без хвостов, т.е. выдается первый идущий в данных экземпляр с минимальным возрастом:
+```{r}
+original_data %>% 
+  slice_min(age, with_ties = F)
+
+```
+
+```{r}
+original_data %>% 
+  slice_max(age, with_ties = F)
+
+```
+
+Зачем использовать сэмплы? Чтобы проверить как наша функция работает на небольшом количестве данных, чтобы сразу уловить ошибки и исправить, тк большие данные долго обрабатывать.
+
+### Mutate
+позволяет изменять типы переменных
+избавились от строковых значений (они стали пропущенным значением) и от количественных, где разделитель запятая создав новую переменную - она пошла в конец. Можно не придумывая новую переменную непосредственно заменить нужную. 
+```{r}
+
+original_data %>% 
+  mutate(bmi_num = as.numeric(bmi))
+
+```
+
+меняем несколько переменных при помощи функции across. Пишем в этой функции вектор нужных переменных и функцию, которая изменяет тип переменных. Более качественно изменяем значения и типы переменных, используя функцию factor levels - те значения, которые были, labels - то на, что меняем (0 на нет, 1 на да). Если варианты значений ограничены, то factor будет оптимальнее по памяти чем chr
+```{r}
+
+original_data %>% 
+  mutate(bmi_num = as.numeric(bmi), 
+         id = as.factor(id),
+         across(c(hypertension, heart_disease, stroke), function(x) factor(x, levels = c("0", "1"), labels = c("нет", "да")))) 
+   
+```
+
+count подсчитывает уникальные значения и их количество, причем уже отсортировано по возрастающей (можно отключить сортировку sort = F)
+.drop - позволяет выводить пропущенные значения, а также сочетания значений, которые не встречаются (или не выводить), лучше всегда ставить False
+```{r}
+original_data %>% 
+  count(age, .drop = F)
+
+```
+
+с помошью count можно делать сводные таблицы
+в count переменные группирующие пишем, по ним и делается таблица
+далее используем mutate, чтобы сделать относительные частоты
+round(2) округляем до двух единиц после единиц
+str_c() - добавляем символ после нашего значения (в нашем случае добавили проценты)
+```{r}
+original_data %>%  
+  mutate(across(c(gender, stroke), as.factor)) %>% 
+  count(stroke, gender, .drop = F) %>% 
+  mutate("Relative freguency" = (n / sum(n) * 100) %>% round(2) %>% str_c("%"))
+
+
+```
+
+###Unite
+Объединяет значения в переменных, например, когда нужно делать сложные категориальные таблицы
+пишем название нового столбца, пишем столбцы, которые объединяем, пишем разделитель sep между значениями
+объединение столбцов (удалить столбцы, которые объединили remove = T)
+```{r}
+original_data %>% 
+  unite("united_variable", work_type, Residence_type, sep = "$", remove = T)
+
+```
+
+
+###Separate
+Обратно Unite
+разъединить столбцы
+пишем название столбца, который разъединяем, названия столбцов в которые разъединяем (они в виде вектора, их количество должно быть равно количеству частей, которые есть в старом столбце) и какой был сепаратор. 
+```{r}
+original_data %>% 
+  unite("united_variable", work_type, Residence_type, sep = "___", remove = T) %>%   
+  separate(united_variable, into = c("work_type", "Residence_type"), sep = "___")
+  
+
+
+```
+
+###group_by + summarise
+Делаем описательные статистики
+Сначала группируем group_by(variable)
+Затем пишем summarise и создаем новый столбик, в котором будет средний возраст - получается новый датафрейм, в котором первый стобик - группирующая переменная, второй, третий  и тд - соответствующее значение статистики
+```{r}
+original_data %>% 
+  group_by(stroke) %>% 
+  summarise(age_mean = mean(age, na.rm = T),
+            glucose_max = max(avg_glucose_level, na.rm = T))
+
+
+```
+
+### Pivot_longer
+длинный формат данных, самый чистый формат - по сути, когда каждая строка являет собой уникальное сочетание значений. Например, если для какого-то субъекта есть несколько визитов, то для длинного формата у нас будет переменная субъект (его id), переменная визит, переменные измеренных параметров
+
+```{r}
+original_data %>% 
+  mutate(across(bmi, as.numeric)) %>% 
+  select(id, age, avg_glucose_level, bmi) %>% 
+  pivot_longer(!id) -> data_long
+
+```
+### Pivot_wider
+делаем как бы исходный вид датафрейма
+можно разобраться с тем, чтобы R находил повторяющиеся строки
+```{r}
+data_long %>% 
+  pivot_wider(names_from = name, values_from = value)
+
+
+```
+
+## Flextable
+это библиотека, она хорошо взаимодействует с R.markdown, все что выведут функции этой библиотеки будет выведено как самые обычные таблицы
+используя ее можно по разному менять внешний вид таблицы
+```{r}
+original_data %>% 
+  mutate(across(c(gender, stroke), as.factor)) %>% 
+  count(stroke, gender, .drop = F) %>% 
+  mutate("Relative frequency" = ((n / sum(n))*100) %>% round(2) %>% str_c("%"), across(stroke, function(x) x %>%  as.character() %>% factor(levels = c("0", "1"), labels = c("No", "Yes")))) %>% 
+  rename("Absolute frequency" = n, "Gender" = gender, Stroke = stroke) %>% 
+  flextable() %>% 
+  theme_box() %>%
+  align(align = "center", part = "all") %>% 
+  merge_v("Stroke")
+
+
+```
+
+Делаем таблицу с некоторыми статистическими описаниями
+```{r}
+original_data %>% 
+  mutate(across(bmi, as.numeric)) %>% 
+  select(age, bmi, gender, stroke) %>% 
+  tbl_summary(by = "stroke") %>% 
+  add_p()
+  
+ 
+
+
+```
+
+В R особо бессмысленно писать циклы, так как все через вектора, векторизовано, есть функция map
+
+
+
+# Data visualisation
+
+
+
+
+# Stat_methods
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+
+
+

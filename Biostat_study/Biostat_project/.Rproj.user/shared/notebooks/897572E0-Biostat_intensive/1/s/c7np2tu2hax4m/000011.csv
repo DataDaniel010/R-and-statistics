@@ -1,0 +1,2 @@
+"0","original_data %>% "
+"0","  unite(""united_variable"", work_type, Residence_type, sep = ""$"", remove = T)"

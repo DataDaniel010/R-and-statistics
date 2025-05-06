@@ -1,0 +1,20 @@
+"0","original_data %>% "
+"0","  mutate(across(bmi, as.numeric)) %>% "
+"0","  select(age, bmi, gender, stroke) %>% "
+"0","  tbl_summary(by = ""stroke"") %>% "
+"0","  add_p()"
+"2","Предупреждение: [38;5;250mThere was 1 warning in `mutate()`.[39m
+[38;5;250m[36mℹ[38;5;250m In argument: `across(bmi, as.numeric)`.[39m
+Caused by warning:
+[33m![39m в результате преобразования созданы NA"
+"1","[1m[33mError[39m in `scope_tidy()`:[22m
+[38;5;250m[33m![38;5;250m The `.$x` data frame does not have the required [34m""variable""[38;5;250m column.[39m
+Backtrace:
+[90m  1. [39m... %>% add_p()
+[90m  5. [39m[1mgtsummary[22m::modify_header(...)
+[90m  6. [39mgtsummary:::.combine_update_and_dots(x, update, ...)
+[90m  7. [39mbroom.helpers::.formula_list_to_named_list(...)
+[90m  8. [39mbroom.helpers:::.single_formula_to_list(...)
+[90m  9. [39mbroom.helpers::.select_to_varnames(...)
+[90m 10. [39m[1m[94mbroom.helpers::scope_tidy([39m[22mvar_info, data[1m[94m)[39m[22m
+"

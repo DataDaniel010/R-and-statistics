@@ -1,0 +1,4 @@
+"0","corrplot(pima_cor, method = ""color"", type = ""lower"", "
+"0","         addCoef.col = ""grey30"", diag = FALSE,"
+"0","         cl.pos = ""b"", tl.col = ""grey10"","
+"0","         col = COL2('RdBu', 10))"

@@ -1,0 +1,6 @@
+"0","ggplot(hogwarts) +"
+"0","  geom_boxplot(aes(y = result),"
+"0","                 fill = ""honeydew1"","
+"0","                 colour = ""firebrick4"","
+"0","               linewidth = 1) +"
+"0","  theme_bw()"

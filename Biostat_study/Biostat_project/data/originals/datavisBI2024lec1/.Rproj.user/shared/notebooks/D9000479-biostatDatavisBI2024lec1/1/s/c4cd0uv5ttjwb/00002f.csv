@@ -1,0 +1,8 @@
+"0","ggplot(hogwarts) +"
+"0","  geom_point(aes(x = Charms_exam, y = Transfiguration_exam, fill = house),"
+"0","             size = 5,"
+"0","             shape = 23,"
+"0","             colour = ""black"","
+"0","             stroke = 1.5,"
+"0","             position = position_jitter(width = 2, height = 2)) + "
+"0","  theme_bw()"

@@ -1,0 +1,8 @@
+"0",""
+"0","df <- data.frame(ID = 1:sample_size,"
+"0","                 sex = my_sample_1,"
+"0","                 biomarker = round(my_sample_2, 1),"
+"0","                 age = round(my_sample_3),"
+"0","                 life = round(my_sample_4))"
+"0",""
+"0","df"

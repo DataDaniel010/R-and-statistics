@@ -1,0 +1,2557 @@
+---
+title: "R learning"
+author: "Danil"
+date: "`r Sys.Date()`"
+output: word_document
+editor_options: 
+  markdown: 
+    wrap: 90
+---
+
+# First Chunk
+
+```{r}
+#FIRST CHUNK
+library(tidyverse)
+library(readxl)
+
+library(flextable)
+library(gtsummary) 
+
+
+library(plotrix)
+library(tibble)
+```
+
+```{r}
+#Time-Series data
+?AirPassengers
+data("AirPassengers")
+str(AirPassengers)
+AirPassengers[12]
+as.vector(AirPassengers) #перевод в вектор
+length(AirPassengers) #количество элементов в векторе и time-series
+
+vec <- c(1, 2, NA, NA)
+is.na(vec)
+
+?is.na
+```
+
+# Basics of R
+
+About R: \# FIRST LESSON. Introduction of environment and Variables R
+
+\- интерпретируемый язык с интерфейсом командной строки то есть команды исполняются
+построчно R
+
+\- мультипарадигменный язык, сочетающий в себе: функциональное процедурное ООП
+рефлексивное программирование
+
+\+ много встроенных стат тестов, алгоритмов, функций анализа данных и тд
+
+\+ расширяемость - модульная система пакетов
+
+\+ полностью программируемая высокоуровневая графика
+
+\+ кросс-платформенность, воспроизводимость
+
+\+ популярность - статьи, книги, конференции
+
+\- сложен - документация сложна
+
+\- легко написать плохой код
+
+\- пакеты дополнений устаревают
+
+\- можно заметить некоторую непоследовательность в именовании переменных и реализации
+методов
+
+очистка консоли ctrl + L
+
+An **object** is basically anything that can be assigned a value. For R, that is just
+about everything (data, functions, graphs, analytic results, and more). Every object has a
+**class attribute** (basically one or more associated text descriptors) that tells R how
+to print, plot, summarize, or in some other way manipulate the object.
+
+## **Help functions**
+
+```{r}
+#general help
+help.start() 
+
+#help on function foo
+help('foo')
+?foo 
+
+#help on package
+help(package = 'ggplot2')
+
+help.search('foo')
+??foo
+
+#examples of function
+example('foo')
+
+#lists all available example datasets
+data()
+
+#lists of all available vignettes
+vignette()
+
+#specific vignettes for function
+vignette('foo')
+```
+
+```{r}
+10:30
+mean(10:30)
+45 + 456
+plot(1:10, 1:10)
+?'plot'
+help('sin')
+help('for')
+example('cor')
+```
+
+## **Managing R workspace**
+
+```{r}
+#current working directory
+getwd()
+
+#changes the current ditectory to mydirectory WON'T CREATE DIRECTORY THAT DOESN'T EXIST
+setwd('mydirectory')
+
+#create directory
+dir.create('created_directory')
+
+#objects in the current workspace
+a <- 1:10
+ls()
+
+#removes objects
+rm(a)
+
+#lets you view or set current options
+options()
+
+#save workspace to myfile (.RData)
+save.image('myfile')
+
+#save specific objects to a file
+save(objectlist, file='myfile')
+
+#load a workspace into the current directory
+load('myfile')
+```
+
+## Variables
+
+Присвоение: \<- Операции: + - \^ \> \< == != \| &
+
+ls() - функция, которая показывает переменные, которые на данный момент в памяти
+
+```{r}
+my_var1 <- 42
+my_var2 <- 35.25
+my_var1 + 100
+my_var1 + my_var2 - 12
+my_var3 <- my_var1^2 + my_var2^2
+ls()
+
+my_var3 > 200
+my_var1 == my_var2
+my_var1 != my_var2
+my_new_var <- my_var1 == my_var2
+
+```
+
+Особенности чисел с плавающей точкой (из за хранения в памяти), чтобы избежать ошибки есть
+функция all.equal()
+
+```{r}
+0.1+ 0.1 == 0.2 #True
+0.1 + 0.05 == 0.15 #False
+
+all.equal(0.1 + 0.05, 0.15) #True
+```
+
+Валидные имена:
+
+```{r}
+.hidden <- 1 #можно
+
+sff2 <- 11 #можно
+
+function <- 1:10
+
+xXx_TerM1Nat0R_xXx <- c(1, 25) #можно
+
+next <- c(2, 34)
+
+:smiley: <- 'bob'
+
+2b.or.not.2b <- 2:10
+
+super_long_name_in_fact_so_long_i_cannot_stop_typing_please_help <- 2:15 #можно
+```
+
+```{r}
+?is.logical
+```
+
+## Types of data
+
+-   Узнать тип: **class(var)**
+
+-   **ЧИСЛОВЫЕ ТИПЫ**
+
+-   Три типа numeric data: integer (целые), double (дробные), complex (комплексные числа).
+
+-   **is.integer(), is.double(), is.complex()** - проверяем является ли число таким
+
+-   `as.integer()`, `as.double()` и `as.complex() - если нужен конкрентый тип`
+
+-   Про *double* есть еще один маленький секрет. Дело в том, что дробные числа хранятся в
+    R как [числа с плавающей запятой двойной
+    точности](https://ru.wikipedia.org/wiki/%D0%A7%D0%B8%D1%81%D0%BB%D0%BE_%D0%B4%D0%B2%D0%BE%D0%B9%D0%BD%D0%BE%D0%B9_%D1%82%D0%BE%D1%87%D0%BD%D0%BE%D1%81%D1%82%D0%B8) (отсюда
+    и название – ***“double”*****,** т.е. ***“double precision”*****).** Да-да, компьютеры
+    неточные!
+
+-   Дело в том, что в обоих случаях это дробное число, которое не может равняться ровно
+    двум. Внутри это не два, а что-то вроде 2.0000….001 или 1.9999…999, число записано как
+    степени двойки и отображено в десятичной системе. R не показывает все доступные цифры
+    дробной части ради удобства, поэтому показывает округление, и мы видим просто число 2.
+
+-   Поэтому при сравнении двух чисел происходит не сравнение их разницы с чистым круглым
+    нулем, а сопоставление с очень маленьким числом – **машинной ошибкой** или **машинным
+    эпсилоном** ***(machine epsilon).*** Если разница между двумя дробными числами меньше
+    этого эпсилона, то числа считаются равными. Если выходят за пределы этой ошибки, то
+    нет. Размер машинного эпсилона можно посмотреть с помощью `.Machine$double.eps`.
+
+-   Во избежание ошибок **all.equal()**
+
+-   **СТРОКОВЫЙ ТИП (character)**
+
+-   paste('words', sep='') - чтобы соединить вместе несколько строковых переменных, sep -
+    можно написать любой разделитель
+
+-   paste0() - склеивает без разделителя
+
+-   **ЛОГИЧЕСКИЙ ТИП (logical)**
+
+-   TRUE и FALSE
+
+-   можно писать T и F но это не оч практика, тк они не защищены от переписывания, тогда
+    как TRUE и FALSE защищены (если в переменную Т написать фалзе, то будет пздц)
+
+-   результаты сравнения, например, числовых или строковых переменных, можно тоже
+    сохранять в переменные
+
+-   Если кому-то вдруг понадобится другое ИЛИ (строгое ЛИБО) – есть функция `xor()`,
+    принимающая два аргумента и возвращая `TRUE` только в том случае, если ровно один из
+    двух аргументов равен `TRUE`.
+
+    ```{r}
+    #NUMERIC
+    is.integer(5) #FALSE - тк особенности хранения
+    #чтобы сделать прям интеджер нужно добавить L
+    is.integer(5L) #TRUE
+
+    sqrt(2)^2 == 2 #FALSE
+    all.equal(sqrt(2)^2, 2) #TRUE
+
+    sin(pi) #must be zero but no - из за неточности хранения дробных чисел
+
+    #CHARACTER
+    s <- 'hello world'
+    class(s)
+
+    paste('i', 'love', 'R', sep = '|')
+    paste0('i', 'love', 'R')
+
+    #LOGICAL
+    comparison <- 1 == 2
+    !FALSE
+    !!FALSE
+    T & F
+    T & T
+    T | F
+    F | F
+    xor(T, F)
+    ```
+
+## Functions (local environment)
+
+Syntax: function() { return() } тело функции существует в локальном окружении
+
+```{r}
+returntwo <- function(y) {
+  y <- y + 2
+  return(y)
+}
+returntwo(6)
+
+```
+
+Глобальное присваивание (\<\<-) - переходит в глобальное окружение:
+
+```{r}
+dogs <- 2
+addten <- function(x) {
+  moredogs <<- x + 10
+}
+addten(dogs)
+dogs
+moredogs
+
+```
+
+такая функция называется функция со сторонним эффектом (side effect) сомнительная
+практика, но иногда используют
+
+Удаление переменных из глобального окружения rm(name):
+
+```{r}
+rm(moredogs)
+rm(dogs)
+
+rm(list = ls()) #удаление всех переменных
+```
+
+## Vectors
+
+Vectors - collecting many numbers (syntax: :, c(), seq(начало, конец, шаг (by)/длина
+вектора (length.out)), rep(vect, times = количество повторений, each = количество
+потворений каждого элемента вектора, length.out = длина вектора) rnorm(length, mean, sd))
+
+Вектор - индексированный набор данных одного типа, векторизация - ключевая концепция языка
+минус - можно сохранять только данные одного типа.
+
+Базовая структура языка, на ней основаны более сложные структуры (матрица, список, дата
+фрейм)
+
+Векторизация - ключеая концепация языка, некоторые функции и операторы действуют
+поэлементно.
+
+-   Есть ли отношения вида "больше-меньше" для строкового типа? Оказывается, да: строки
+    можно упорядочить в так называемом лексикографическом порядке. Поэтому "самая большая
+    строка" -- это не значит самая длинная, это последняя в упорядоченном наборе строк.
+
+-   Векторизованность в самом широком смысле означает поэлементное действие: функция f
+    векторизована, если f(v) есть результат применения f к каждому элементу вектора v. Это
+    не всегда означает, что длина результата равна длине v.
+
+![](images/clipboard-3126728044.png)
+
+R не делает различия между скалярными и векторными величинами, т.е. скаляр - это вектор
+длины 1.
+
+Индексация с 1
+
+v
+
+```{r}
+#examples
+1 : 67
+10:-1
+
+vector <- c(1, -1, 15, 25)
+
+x <- c(5, 8)
+y <- c(x, 1, c(3, 4), x, NA)
+
+v <- seq(1, 2, by = 0.1) #вектор с определенным шагом
+seq(3, 4, length.out = 5)
+
+rep(x, times = 5)
+rep(x, each = 5)
+rep(x, length.out = 7)
+
+a <- c(rnorm(16, mean = 1, sd = 3)) #создание вектора с помощью функции нормального распределения rnorm(number, mean =, sd =)
+```
+
+```{r}
+v <- 1:100
+#приведенные ниже строки выполняют одну и ту же задачу
+v[c(rep(T, 6), F)]
+
+v[-(seq(7, length(v), by = 7))]
+
+v[1:length(v) %% 7 != 0]
+
+v[-(1:floor(length(v)/7)*7)]
+
+v[1:length(v) %% 7 > 0 ]
+```
+
+```{r}
+check <- function(x) {
+  print(max(x))
+  print(which.max(x))
+  print(which(x))
+}
+
+check(5)
+check(1:10)
+check(22:19)
+check(c('a', 'bbb'))
+check(c(T, F))
+
+which.max(c('BB', 10, 'A'))
+```
+
+```{r}
+#fizz-buzz
+ym <- character(100)
+for (i in 1:100) {
+  if (i %% 15 == 0) {
+    ym[i] <- 'fizz buzz'
+  } else if (i %% 3 == 0) {
+    ym[i] <- 'fizz'
+  } else if (i %% 5 == 0) {
+    ym[i] <- 'buzz'
+  } else {
+    ym[i] <- i
+  }
+}
+ym
+
+#another way
+xm <- 1:100
+zm <- 1:100
+xm %% 5
+zm[xm %% 5 == 0] <- 'buzz'
+zm[xm %% 3 == 0] <- 'fizz'
+zm[xm %% 15 == 0] <- 'fizz buzz'
+all(ym == zm)
+```
+
+```{r}
+mess <- letters
+mess[c(19, 15, 18, 18, 25, 1, 2, 15, 21, 20, 20, 8, 1, 20)]
+```
+
+### Типы векторов
+
+-   атомарные - все элементы одного типа (в каждый момент времени тип вектора однозначен и
+    все элементы именно этого типа)!!!!
+
+-   logic (TRUE/FALSE)
+
+-   integer (чтобы сделать integer нужно дописать букву L. vec \<- c(15L, 2L, 3L))
+
+-   double (числа с плавающей точкой) numeric это и double и integer. Doubles are
+    approximations. Doubles represent floating point numbers that can not always be
+    precisely represented with a fixed amount of memory. Calculations will include some
+    approximation error. To avoid this error use **dplyr::near()**
+
+-   complex (комплексные числа)
+
+-   character
+
+-   raw (байтовые последовательности)
+
+    Для определения типа вектора: typeof(vec) / is.\* (\* - любой из типов)
+
+    ```{r}
+    a <- c('aa', 'aaa', 'witcher', 'money', T, 15.1)
+    typeof(a)
+
+    is.character(a)
+
+    is.logical(a)
+
+    ```
+
+Приведение типов
+
+Естественным считается приведение слева направо по цепочке
+
+logical-integer-double-character (то есть если в векторе есть более правое в данной
+цепочке, то такого типа и будет вектор - все значения превращаются в этот тип данных)
+
+```{r}
+b <- c(F, 1.5)
+typeof(b)
+```
+
+```{r}
+b <- c(b, 'abc')
+typeof(b)
+```
+
+Принудительное приведение типов осуществляется функциями as.\*
+
+```{r}
+as.double(b)
+
+a <- c('a', 'v')
+as.integer(a)
+```
+
+```{r}
+as.integer(b)
+```
+
+### Indexes
+
+Можем обращаться по индексам к элементам вектора, наинаются с 1
+
+Положительные, отрицательные, логические, именованные индексы
+
+```{r}
+y <- seq(1, 100, by = 5)
+
+y[1]
+
+#Обращаемся к нескольким элементам вектора по индексам
+y[c(1,3,5)]
+
+#Создание нового вектора из другого вектора
+v <- y[3]
+
+#Запись нового элемента вектора по индексу (замена)
+y[1] <- 15
+y[1]
+
+y[] #получим весь вектор
+
+#Положительные индексы - элементы с указанными порядковыми номерами
+y[2]
+y[4:6]
+y[c(2, 7, 3:8, y[1])]
+
+#Отрицательное индексирование - все элементы, кроме указанных
+y[-1]
+y[-(2:6)]
+y[-length(y)] #все элементы кроме последнего выводятся
+y[c(-1, -(3:8), -7, -3, -length(y))]
+
+#Логические индексы - все элементы, соответствующие значению TRUE
+y[rep(c(T,F))]
+y[c(T,F)] #выводим с нечетными индексами
+y[y > 20 & y < 70]
+
+#Индексация по имени
+b <- c('one' = 1, 'b' = 2, 'f' = 4)
+b[c('one', 'b')]
+b[c('f', 'c', 'f')] #если имен не существует будет NA
+```
+
+### Operations with vectors
+
+Vector concatenation:
+
+```{r}
+vector1 <- c(1,2,3, 10:199)
+vector2 <- c(4,5,3, 10, 11)
+vector3 <- c(vector1, vector2)
+```
+
+Vector_operations(+, -, ==, \<, \>, sum, []) %% - остаток от деления, %/% - возвращает
+целую часть от деления abs - модуль & \| !
+
+```{r}
+vector1 + 10
+vector2 - 100
+
+vector1 == 1
+vector1 == vector2 #попарное сравнение элементов векторов
+
+sum_vector <- sum(vector1, vector2) #сумма всех элементов векторов
+
+vector2[vector2 > 3] #в [] условие, будут выводиться лишь те значения, которые удовлетворяют условию
+
+#Geometric progression
+x <- 2 ^ (0:10)
+x
+log2(x) #двоичный логарифм
+
+#Some randomness
+set.seed(42)
+x2 <- sample(1:100, 50)
+
+#Neighbors with greatest diff
+x2[-1]
+x2[-length(x2)]
+x2[-1] - x2[-length(x2)] #получили попарную разницу между соседями
+k <- which.max(abs(x2[-1] - x2[-length(x2)])) #получаем индекс 
+x2[c(k, k+1)] 
+```
+
+Combine operations (&) - выбираем кусок вектора
+
+```{r}
+part_vector1 <- vector1[vector1 < 199 & vector1 > 100]
+
+```
+
+Statistics operations (mean)
+
+```{r}
+mean(part_vector1)
+
+greater_than_mean <- part_vector1[part_vector1 > mean(part_vector1)]
+
+```
+
+#### Recycling rules
+
+Как работает арифметика на векторах разной длины?
+
+1.  Длина результата равна длине большего из векторов
+
+2.  Меньший вектор дублируется несколько раз, чтобы длина переписанного вектора совпадала
+    с длиной большего
+
+3.  Если длина большего вектора не делится нацело на длину меньшего выдается
+    предупреждение, но не ошибка
+
+    ```{r}
+    1:5 + 0:1
+
+    ```
+
+Зачем такое нужно - арифметические действия между вектором и вектором длиной 1 (скаляром).
+Удобно для арифметики!
+
+```{r}
+1:5 + 3
+
+(2:4)^2
+
+1:5 >= 3
+```
+
+### Useful functions with vectors
+
+Создание: c(), seq(), rep()
+
+**length** - узнать длину вектора
+
+**typeof()** - узнать тип данных вектора
+
+**as.\*** \* - integer, double(numeric), character, logical - функция для приведения
+вектора к определенному типу данных
+
+**sort()** - соритрует в порядке возрастания по дефолту / **rev(sort())** - сортирует в
+обратном порядке
+
+**unique()** - удаляет повторы в векторе
+
+**floor()** - округление
+
+**sum()** - сумма всех элементов в векторе
+
+**sample(vect, n, prob =, replace = )** - берет из вектора vect рандомные элементы n раз,
+можно изменять вероятности появления prob =, replace = T - означает, что числа могут
+повторяться по умолчанию F
+
+**all(vect condition)** все ли элементы вектора vect соответствуют условию condition
+(можно сравнивать элементы разных векторов all(vect1==vect2))
+
+**any(vect condition)** есть ли хоть один элемент вектора vect, который удовлетворяет
+condition
+
+**which(vect condition)** - возвращает индексы элементов, соответствующие условию
+
+**which.min(vect) / wich.max(vect)** - возвращают индексы элементов минимального /
+максимального (по размерности) which(x == min(x)) #получаем индексы всех минимальных
+значений
+
+**max() / min()** - возвращает максимум из введенного значения
+
+**pmax() / pmin()** - берет как аргумент более одного вектора и возвращает максимум
+
+**с(name = value), names(vect)** - именованные вектора
+
+**paste0('name', vect)** - склеивает аргументы в вектор строк
+
+**table(vect)** - возвращает вектор похожий на таблицу, где показывает все уникальные
+значения и подсчитывает их (сам вектор это и есть количество каждого уникального значения)
+работает и с дата фреймами
+
+**attr(var, 'attribute') \<- 'smth'** - назначаем значение smth атрибуту 'attribute',
+который принадлежит переменной var
+
+```{r}
+a <- 1:10
+max(a)
+paste0('a', a)
+x <- seq(1, 1000, by = 15)
+all(x < 300)
+all(x < 1000)
+
+any(x > 100)
+any(x < 1)
+
+which(x == 16)
+which.min(x)
+which.max(x)
+
+max(y)
+
+xy <- c(1, 15, 25)
+max(xy)
+which(xy > 10)
+```
+
+```{r}
+#Geometric progression
+x <- 2 ^ (0:10)
+x
+log2(x) #двоичный логарифм
+
+#Some randomness
+set.seed(42)
+x2 <- sample(1:100, 50)
+
+#Neighbors with greatest diff
+x2[-1]
+x2[-length(x2)]
+x2[-1] - x2[-length(x2)] #получили попарную разницу между соседями
+k <- which.max(abs(x2[-1] - x2[-length(x2)])) #получаем индекс 
+x2[c(k, k+1)] 
+
+#Multiple min/max
+x <- sample(1:100, 50, replace = T)
+min(x)
+which.min(x) #получаем индекс лишь первого минимального значения
+which(x == min(x)) #получаем индексы всех минимальных значений
+
+#Packing into a function
+maxdiff <- function(x) {
+  y <- abs(x[-1] - x[-length(x)])
+  k <- which(y == max(y))
+  print('First neighbors:')
+  print(x[k])
+  print('Second neighbors:')
+  print(x[k+1])
+  print(max(y))
+}
+
+xx <- sample(1:105, 1e4, replace = T)
+maxdiff(xx)
+```
+
+```{r}
+u <- seq(0, 1, 1/3)
+u
+m <- seq(0, 1, 1/7)
+m
+(0:7) / 7
+w <- c(u, m)
+w <- sort(w)
+w <- unique(w)
+w
+```
+
+length(vector)
+
+```{r}
+x <- 1:100
+length(x)
+```
+
+Длина определеяется автоматически, но ее можно принудительно менять:
+
+```{r}
+length(x) <- 4
+x
+
+length(x) <- 7
+x
+```
+
+#### Именованные вектора
+
+c(name = value)
+
+names(vector) - возвращает вектор имен, используя его можно также переприсвоить имена
+
+```{r}
+a <- c(uno = 1, dos = 2, "universal answer" = 42, 99)
+```
+
+```{r}
+names(a)
+```
+
+```{r}
+names(a) <- c('oneoneone', 'two', 'forty two', 'ninety nine')
+a
+```
+
+```{r}
+names(a) <- NULL #убираем все имена, остаются только значения
+a
+```
+
+#### Векторная арифметика
+
+Арифметические операторы применяются поэлементно
+
+```{r}
+1:3 + c(-1, 5, 11, 12, 15)
+
+1:3 * c(-1, 2, 0)
+
+c(T, T, T) & c(0, 1, 99)
+```
+
+#### Векторизация
+
+многие функции в R имеют встроенную поддержку векторизации - сами создают векторы
+
+```{r}
+sqrt(1:4)
+
+floor(seq(0, 3, by = 0.25)) #округление
+
+sum(1:100) #не векторизована, получаем не вектор, а одно число
+```
+
+### Атрибуты объектов
+
+-   length - это свойство объекта, оно есть всегда
+
+-   Атрибуты (names, dimnames, dim...) могут присутствовать если это необходимо
+
+-   **attr(var, 'attribute') \<- 'smth'** - назначаем значение smth атрибуту 'attribute',
+    который принадлежит переменной var
+
+-   **attributes(var)** - показывает все атрибуты переменной
+
+```{r}
+x1 <- c(5, 3, 9)
+names(x1) <- c('V', 'III', 'IX')
+
+attr(x1, 'author') <- 'Caesar'
+attributes(x1)
+
+#избавляемся от аттрибутов
+attributes(x1) <- NULL
+```
+
+### **Augmented vectors**
+
+Vectors can also contain additional metadata in the form of attributes. Attributes are
+used to create augmented vectors which build on additional behaviour.
+
+Three types:
+
+-   factors are built on top of integer vectors
+
+-   dates and date-times are build on top of numeric vectors
+
+-   data frames and tibbles are built on top of lists
+
+## Matrix
+
+-   матрица это двумерный массив данных одного типа
+
+-   по сути это вектор, уложенный по столбцам
+
+-   для создания матрицы функция **matrix(vect, nrow = , ncol = , byrow=T/F(по умолчанию
+    F), dimnames = list(char_vector_rownames, char_vector_colnames))**, можно указывать
+    либо nrow либо ncol. Чтобы вектор был упакован не по столбцам, а по строчкам byrow
+    = T. Dimnames contains optional row and column labels stored in character vectors
+
+-   отличие матрицы от вектора - матрица имеет атрибут dim - размерность. Функция
+    **dim(matrix)** - показывает размерность в формате строки, столбцы. Аналогично можно
+    посмотреть через функции (nrow, ncol)
+
+-   арифметические операции - поэлементное складывание двух матриц (одинаковых), к каждому
+    элементу матрицы можно добавить число, умножить, вычесть. Умножение матриц будет
+    происходить поэлементно, поэтому умножение в смысле линейной алгебры задается
+    оператором %\*%
+
+-   индексирование матриц - то же самое, что для векторов, но с учетом двух размерностей
+    **matrix[row, col]**. Если опустим один из индексов, то получаем доступ целиком к
+    строке или столбцу. Таким образом можно заменять элементы матрицы по индексу (так же
+    заменять строчки и столбцы)
+
+-   схлопывание размерности - если вызывать подматрицу из матрицы по индексам, то в случае
+    единичного индекса получим вектор, а не столбец матрицы. чтобы этого избежать
+    **matrix[ind_row, ind_col, drop = F]**
+
+-   именованные матрицы **rownames/colnames** и можно будет обращаться по именам, а не по
+    индексам
+
+-   присоединения матриц **rbind/cbind** rbind - присоединение по строкам, cbind -
+    присоединение по столбцам. В этих функциях есть аргумент ... (ellipsis) - он означает,
+    что можно в эти функции передавать неограниченно число аргементов
+
+-   применение функций к матрице: **apply**. Можно было бы делать через цикл for, но есть
+    специальная функция - apply. Применяет функцию и к строкам и к столбцам. apply(matrix,
+    (1 - применение к строкам, 2 - применение к столбцам, чтобы и к строкам и столбцам
+    1:2), function)
+
+-   частые операции с матрицами: rowSums, rowMeans, colSums, colMeans
+
+-   diag(matrix) - extract or replace the diagonal of a matrix, or construct a diagonal
+    matrix. Может сделать матрицу, если указать число рядов и столбцов
+
+```{r}
+b <- matrix(1:100, nrow = 20, ncol = 5)
+b[1, , drop = F]
+
+matrix(1:6, nrow = 2)
+
+matrix(1:6, nrow = 2, byrow = T)
+
+matrix(1:2, nrow = 2)
+
+diag(TRUE, 3)
+diag(10, 3, 4)
+```
+
+```{r}
+n <- matrix(1:6, nrow = 3)
+dim(n)
+c(nrow(n), ncol(n))
+
+#убираем матрицу и получаем обычный вектор
+dim(n) <- NULL
+n
+#снова создаем матрицу
+dim(n) <- c(3, 2)
+n
+
+#арифметические операции
+n1 <- matrix(1:4, nrow = 2)
+n2 <- matrix(c(1, 2, 2, 8), nrow = 2)
+n1 + n2 #сложение матриц
+n1 + 5 
+n1 * 2
+n1 * n2 #поэлементное умножение
+n1 %*% n2 #алгебраическое умножение матриц
+
+#индексы
+n1[2, 2]
+n1[,1]
+n1[1, ] <- 0 #в первой строке заменили элементы на 0
+n1
+n1[, -1] <- 1:2 #во всех столбцах кроме первого заменили элементы на 1, 2
+n1
+
+#схлопывание размерности
+m <- matrix(1:10, ncol = 5)
+m[, 1:3] #выводится матрица
+m[, 1] #выводится вектор
+m[, 1, drop = F] #получаем столбец 
+
+#именованные матрицы
+rownames(m) <- c('row1', 'row2')
+colnames(m) <- paste0('column', 1:5)
+m
+m['row1', c('column3', 'column5'), drop = F] #обращаемся по именам, а не по индексам
+
+#присоединение матриц
+m1 <- matrix(1:4, ncol = 2)
+m2 <- matrix(c(1, 11, 13, 15), ncol = 2)
+rbind(m1, m2)
+cbind(m1, m2)
+#проверяем ellipsis
+cbind(m1, m2, 1:2, c(11, 12), m2 * 5, cbind(m1, m2))
+
+#применение функций к матрице
+b <- matrix(1:25, 5)
+f <- function(x) x^2
+b <- apply(b, 1:2, f)
+apply(b, 1:2, function(i) if (i > 13) i else 13) #более сложный вариант, функция в apply - анонимная функция, ее не остается в окружении, пропадает после применения apply 
+b[b <= 13] <- 13 #действие аналогично предыдущей строке
+b
+
+#частые функции
+rowSums(b)
+rowMeans(b)
+colSums(b)
+colMeans(b)
+all.equal(rowSums(b), apply(b, 1, sum))
+
+b > 5 #получаем матрицу с логическими значениями
+b[b > 13] #получаем вектор
+
+#diag
+m <- matrix(1:10, ncol = 5)
+diag(m)
+diag(10)
+diag(1:2)
+```
+
+```{r}
+#bind matrices diagonally
+bind_diag <- function(m1, m2, fill) {
+  m3 <- matrix(fill, 
+               nrow = nrow(m1) + nrow(m2),
+               ncol = ncol(m1) + ncol(m2))
+  m3[1:nrow(m1), 1:ncol(m1)] <- m1
+  m3[nrow(m1) + 1:nrow(m2), ncol(m1) + 1:ncol(m2)] <- m2
+  m3
+}
+
+m1 <- matrix(1:12, nrow = 3)
+m2 <- matrix(10:15, ncol = 3)
+bind_diag(m1, m2, fill = 0)
+```
+
+## **Arrays**
+
+-   similar to matrices but can have more than 2 dim
+
+-   **array(vec, dimensions, dimnames=list(char_vectors))**
+
+    ```{r}
+    myarray <- array(1:16, c(2,4,16))
+    ```
+
+## List
+
+-   Список - индексированная структура
+
+-   Элементами могут быть произвольные объекты
+
+-   Обычно используется для хранения данных различной длины или **различных типов**
+    (Отличие от вектора) то есть когда нам требуется вывести разные типы данных - вектор и
+    матрицу одновременно
+
+-   Создание - функция **list()**
+
+-   Можно делать списки с именованными индексами. **name = object** Чтобы посмотреть
+    имена - **names(). Чтобы посмотреть список с именами и значениями list[names(list)].**
+
+-   Список может быть рекурсивным - элементом списка может быть другой список. Так можно
+    создавать древовидные структуры
+
+-   Конкатенация списков - функция **c(list1, list2)**
+
+-   Конверсия между списком и вектором - можно вектор привести к списку. Из списка в
+    вектор - функция **unlist()**
+
+-   Доступ к элементам списка **[]** - положительное, отрицательное, логическое, по имени
+    (так же как у векторов) - получаем список длины 1 (подсписок). **[[number_of_element /
+    name]]** - обращение к конкретному элементу списка - получили вектор. Доступ к
+    **имени** с частичным дополнением **\$ - также получаем элемент списка**
+
+-   Замена и добавление элементов списка - обращаемся по индексу и присваиваем значение,
+    либо убираем через NULL (можно присваивать и к большим индексам, которые есть, там,
+    где не было присваивания будет NULL). Элементом списка может быть функция
+
+-   Применение функций к списку: **lapply(list, function) / sapply(list, function)** -
+    упрощенная, получаем вектор (simplify apply)
+
+-   Частичное дополнение по \$ и аргументам функции. Можно не писать имя элементам списка
+    целиком
+
+Сохраняет данные разных видов
+
+```{r}
+d <- c(11, 12, 14)
+lst <- list(d)
+unlist(lst)
+
+#list
+list(1:5, 'my_data', matrix(1:4, 2))
+
+#list_named
+list(a = 1, b = 10:20, 'item' = c('poop', 'boob'), matrix(0, 2, 4), 42)
+
+#рекурсия
+list(a = list(1, 2:10, 'pipa'), 1:10)
+
+#конкатенация
+l1 <- list(name = 'Dodo', bebra = T)
+l2 <- list(sniff = F, type = 'Human')
+c(l1, l2)
+
+#конверсия
+v <- 1:7
+list(v)
+
+l <- list(1:3, 4, 6, last = 99)
+l[[1]][1]
+unlist(l)
+unlist(c(l, 'spy')) #работает приведение типов
+
+#доступ к элементам списка
+l[3:2]; l[-(1:2)]
+l[c(F, T, F, T)]; l['last']
+l[[1]]; l[['last']]
+l$last; l$l
+
+#замена и добавление элементов списка
+l1 <- list(1:3, 4:5, last = 6)
+l1[[3]] <- NULL; l1
+l1[[4]] <- 99; l1
+
+l2 <- list(vec = 1:7, fun = sqrt)
+l2$fun(4)
+names(l2)
+is.null(l2$string)
+l2$string <- 'popa, jopa' #добавили новый элемент по названию
+l2
+
+#lapply, sapply
+l3 <- list(a = c('12', '34'), b = LETTERS[5:10], c = 1:5)
+lapply(l3, length)
+lapply(l3, paste, collapse = '|') #склеиваем все элементы в одну строку collapse - элемент функции paste
+lst <- lapply(l3, function(s) paste(s, collapse = '|')) #аналогично предыдущему, только функция анонимная
+sapply(l3, paste, collapse = '|')
+
+#частичное дополнение (и в функциях применимо)
+l4 <- list(some_name = 1, incredibly_long_dick = 15)
+l4$inc + 1 #не пишем имя целиком
+f <- function(x, ridiculously_long_arg) x + ridiculously_long_arg
+f(3, ridic = 5)
+
+age <- c(16, 18, 22, 27)
+is_married <- c(F, F, T, T)
+name <- c('Olga', 'Maria', 'Nastya', 'Polina')
+
+data <- list(age, is_married, name)
+
+```
+
+```{r}
+#get the longest element получаем и позицию и сам элемент
+get_longest <- function(l) {
+  len <- sapply(l, length)
+  ind <- which.max(len)
+  list(number = ind, element = l[[ind]])
+}
+
+get_longest(l3)
+
+#generate list with random length and contents
+gen_list <- function(n_elements, max_len, seed = 111) {
+  set.seed(seed)
+  len <- sample(1:max_len, n_elements)
+  lapply(1:n_elements, function(i) rnorm(len[i]))
+}
+
+l4 <- gen_list(4, 10)
+l4
+gl4 <- get_longest(l4)
+gl4$number
+```
+
+### List Indexes
+
+```{r}
+data[[3]]
+data[[1]][2]
+data[[2]][1]
+```
+
+## Data frame
+
+-   Двумерная таблица с данными (эксель sql)
+
+-   Де-факто стандартный способ хранения данных в формате "наблюдения/переменные" - строки
+    наблюдения, столбцы переменные
+
+-   наследует свойства матрицы (прямоугольная форма) и списка (переменные могут быть
+    разных типов)
+
+-   Чаще всего используют, данные разных типов, является списком **data.frame(Var =
+    vector/list, Var = vector/list, row.names = Var)**
+
+-   создание **df \<- data.frame()**
+
+-   **str** - сводка об объекте
+
+-   **row.names =** - имена объектов (строк) при записи в датафрейм
+
+-   доступ к именам: **rownames(df), colnames(), dimnames() - список из rownames and
+    colnames**
+
+-   Размерности: **nrow(), ncol(), dim() - список из nrow and ncol**
+
+-   **length(df)** - количество столбцов (элементов), а не общее количество элементов
+
+-   **names(df)** - возвращает имена столбцов (переменные)
+
+-   общее количество элементов: nrow \* ncol
+
+-   Индексация мб положительная, отрицательная, логическая, по именам **df[row, column]
+    df\$variable (работает частичное дополнение)**
+
+-   Фильтрация по условию **df[df_variable_condition, ]** - фильтрация по условию в
+    переменной variable (будут выведены все ряды, всех переменных, которые прошли отбор
+    именно по этой переменной). Функция **subset(df, variable_condition, select = )** -
+    select позволяет выбрать конкретные переменные (кавычки не нужны)
+
+-   Комбинирование data frame. Функции **rbind/cbind** работают как для матриц. Еще
+    способ - merge - создает новый df по ключу x. **merge(df1, df2, by = 'variable')**.
+    Это аналог операции inner join в SQL.
+
+-   **with(data frame, {functions functions functions})** The limitation of the with()
+    function is that assignments exist only within the function brackets. If you need to
+    create objects that will exist outside of the with() construct, use the special
+    assignment operator (\<\<-) instead of the standard one (\<-). It saves the object to
+    the global environment outside of the with() call.
+
+```{r}
+#создание дата фрейма
+df <- data.frame(x = 1:10, y = LETTERS[1:10], z = c(T, F), row.names = c(1:10))
+
+#сводка
+str(df)
+summary(df)
+
+#доступ к именам
+rownames(df)
+colnames(df)
+dimnames(df)
+
+#рамерности - количество столбцов
+length(df)
+
+#индексация
+df[3:4, -1] #3-4 ряд, без первой колонки
+df[c(F, T), c('z', 'x')] #работают правила переписывания
+df[, 1] #схлопывается в вектор
+df[, 1, drop=F] #не схлопывается
+#обращение к конкретному столбцу
+df$z
+df[[3]]
+df[['z']]
+
+#фильтрация по условию
+df[df$x > 3, ]
+subset(df, x > 2, select = c(y, z))
+
+#комбинирование data frame
+rbind(df, data.frame(x=5:6, y = c('K', 'Z'), z = T, row.names = c('Kappa', 'Delulu')))
+cbind(df, data.frame(n = 20:29, let = letters[16:25]))
+merge(df, data.frame(x = 1:3, y = letters[1:3], univers = 47), by = 'x')
+
+df <- data.frame(Name = name, Age = age, 
+                 Status = is_married)
+typeof(df)
+
+#with()
+data(mtcars)
+summary(mtcars$mpg)
+plot(mtcars$mpg, mtcars$disp)
+plot(mtcars$mpg, mtcars$wt)
+#OR
+with(mtcars, {
+  summary(mpg)
+  plot(mpg, disp)
+  plot(mpg, wt)
+})
+with(mtcars, {
+  nokeepdata <- summary(mpg)
+  keepdata <<- summary(mpg)
+})
+keepdata
+```
+
+### Этапы
+
+-   Импорт в дата фрейм
+
+-   Очистка значений, проверка типов - все типы распознанны верно, подкорректировать если
+    нужно
+
+-   Работа со строками: имена, переменные строкового типа, факторы. Проверить что
+    переменные строкового типа и факторы не смешиваются между собой
+
+-   Пропущенные значения: идентификация, способ обработки - правильно ли распознались
+    пропущенные значения
+
+-   Манипулирование переменными: преобразование, создание, удаление. Создание новых
+    переменных
+
+-   Подсчет описательных статистик: split-apply-combine. Убеждаемся, что все в порядке и
+    подсчитываем описат статистики
+
+-   Визуализация данных
+
+-   Экспорт
+
+### Импотр данных
+
+-   из файла: .csv / .tsv - самое распространенное
+
+-   самое сложное - нестурктурированный текст - для работы с таким есть функции
+    **readLines, scan**
+
+-   XML, HTML, JSON, YAML - имеются библиотеки для импорта, парсинга library(XML),
+    library(httr), library(rjson), library(RJSONIO)
+
+-   Excel - library(XLConnect), library(readxl) - импорт из эксель, можно в самом экселе
+    превратить файл в csv
+
+-   SAS, Stats, SPSS, MATLAB - library(foreign), library(sas7bdat)
+
+-   Из интернета - library(rvest)
+
+-   Базы данных: реляционные - library(DBI), library(RSQLite), нереляционные
+    library(rmongodb)
+
+### Reading
+
+**read.smth / read_smth (tydiverse)**
+
+Можно указывать:
+
+file - название файла, header - если есть заголовок (название над столбцами), sep - каким
+знаком разделены столбцы в данных, dec - каким знаком разделены десятичные дроби
+
+Чтение табличных данных:
+
+-   **read.table()** file - имя файла, **header** - наличие или отсутствие заголовка в
+    первой строке (логическая переменная), **sep** - разделитель значений, **quote** -
+    символы, обозначающие кавычки (для строкового типа), na.strings - строки кодирующие
+    пропущенное значение (по умолчанию строка из NA, но может быть другая строка,
+    например, missing), **colClasses** - типы столбцов (для быстродействия и указания
+    типа: строка-фактор-дата/время) если нет R будет сам угадывать что за значения,
+    **comment.char** - символ, обозначающий комментарий (если есть такой символ, то строка
+    не считается, данные не учитываются тк коммент), **skip** - количество строк,
+    пропускаемых с начала файла
+
+-   Функции: read.csv, read.csv2, read.delim, read.delim2 - оболочки read.table с
+    расставленными умолчаниями
+
+```{r}
+mydata <- read_csv("data/raw/evals.csv")
+```
+
+### Очистка значений, проверка типов
+
+-   Типы переменных на которых легко ошибиться при импорте:
+
+    -   числовые типы становятся строковыми из-за пропущенных значений, отмеченных не как
+        NA na.strings = c('NA', 'Not Available', 'Missing')
+
+    -   из-за неверно указанных разделителя, десятичного знака sep = ',' dec = '.' (часто
+        в ру источниках вместо точки запятая)
+
+    -   из-за кавычек, сопроводительного текста или комментариев **quote, comment.char,
+        skip**
+
+-   Строковые типы становятся факторами или наоборот **as.character, as.factor**
+
+-   Тип дата/время остается строковым **as.POSIXct, as.POSIXlt, as.Date**
+
+-   Функции **str, summary, head, tail** помогут определить все ли в порядке
+
+### Summary
+
+```{r}
+head(mydata, 10) #верхние 6 строк, либо указываем количество строк
+
+tail(mydata, 15) #нижник 6 строк, либо указываем количество
+
+View(mydata) #посмотреть данные - откроется вкладка с таблицей
+
+str(mydata) #показывает структуру, какие колонки, какой тип переменных, сколько строк. Chr - текст, num - цифры, factor - факториальные переменные (только определенный набор значений принимает)
+
+summary(mydata) #общее саммари по данным + среднее, минимальное, квартили, мода, медиана
+
+names(mydata) #имена столбцов в виде вектора
+
+#Все указанное можно записать в переменные
+
+```
+
+### Работа с переменными
+
+-   df[complete.cases(df), ] na.omit(df) - функции для удаления наблюдений с пропущенными
+    значениями (можно пользоваться, если данных оч много)
+
+-   Замена NA на некоторые значения может быть потенциально опасной
+
+    -   Заполнение средним может вносить смещение в данные
+
+    -   заполнение нулями вообще не корректно
+
+-   Создание, изменение и удаление переменных выполняется конструкциями:
+
+    -   df\$new_var \<-
+
+    -   df\$old_var \<- f(df\$old_var),
+
+    -   df\$old_var \<- NULL
+
+-   Для работы сразу с большим количеством переменных можно воспользоваться функцией
+    within(df, functions)
+
+### Variables in data frame
+
+```{r}
+mydata$score #обращаемся к конкретной переменной (стобцу) в датафрейме получим все значения столбца
+
+mean(mydata$score) #можем делать разные операции с этим вектором значений столбца
+
+summary(mydata$score)
+
+mydata$score * 2
+mydata$ten_point_scale <- mydata$score * 2 #создание новой переменной и внесение в нее значений - она появляется последним столбцом
+
+summary(mydata$ten_point_scale)
+
+mydata$new_var <- 0 #новый стобец, все значения нули
+
+mydata$number <- 1:nrow(mydata) # новыйстолбец со значениями от 1 до количества строк в дф
+
+
+```
+
+### Subsetting and subsetting with conditions
+
+можем выбирать конкретные участки датафрейма. [], subset(df, condition)
+
+```{r}
+mydata$score[1:10] #обращаемся к переменной как к вектору и смотрим первые 10 рядов
+
+mydata[1, 14] #тк датафрейм двумерный объект обращаемся по индексам к элементам в формате [row, column]
+mydata[c(11, 121, 256), 1]
+
+mydata[5,] #получаем всю строчку номер 5
+mydata[,1] #получаем весь первый столбец
+mydata[,1] == mydata$score
+
+mydata[,1:3] #можно и несколько колонок - столбцов
+
+mydata$gender == 'female' #проверка какие значения являются female
+
+mydata[mydata$gender == 'female', 1] #выводятся данные первой переменной по условию, gender == female (True)
+
+subset(mydata, gender == 'female') #выбираем только те ряды, где gender == female (true)
+subset(mydata, score > 3.5)
+```
+
+### Methods nd functions
+
+```{r}
+nrow(mydata) #количество строк
+
+ncol(mydata) #количество переменных
+
+#rbind - связываем вместе ряды таблиц, главное, чтобы столбцы были одинаковые
+mydata2 <- subset(mydata, gender == 'female')
+mydata3 <- subset(mydata, gender == 'male')
+mydata4 <- rbind(mydata2, mydata3)
+
+#cbind - связываем вместе столбцы (переменные)(редко)
+mydata5 <- mydata[,1:10]
+mydata6 <- mydata[,11:22]
+mydata7 <- cbind(mydata5, mydata6)
+
+#удаление столбца (переменной)
+mydata$new_variable <- 0
+mydata$new_variable <- NULL
+
+#взять все кроме указанных строк и столбцов
+am <- mydata[-c(1:100, 123), -c(2:10)]
+```
+
+### Экспорт
+
+-   write.table, write.csv, write.csv2 - практически идентичны функциям импорта
+
+-   если массив данных достаточно большой, лучше всего отделять этап предобработки данных
+
+    -   отдельным файлом .R
+
+    -   отдельным файлом с предобработанными чистыми данными
+
+## **Tibbles**
+
+-   data frames that have specialized behaviors that are designed to make them more useful
+
+-   tibble package. **tibble(), as_tibble()**
+
+-   Tibbles print in a **more compact format than standard data frames**. Additionally,
+    variable labels describe the data type of each column. Tibbles **never convert
+    character variables to factors** (problem from older R versions).
+
+-   Tibbles **never change the names of variables**. If the dataset being imported has a
+    variable called Last Address, base R functions would convert the name to Last.Address,
+    since R variable names don’t use spaces. Tibbles would keep the name as is and use
+    backticks (e.g., \`Last Address\`) to make the variable name syntactically correct.
+
+-   **Subsetting a tibble always returns a tibble.** For example, subsetting the mtcars
+    data frame using mtcars[,"mpg"] would return a vector, rather than a one-column data
+    frame. R automatically simplifies the results. To get a one-column data frame, you
+    would have to include the drop = FALSE option (mtcars[, "mpg", drop = FALSE]). In
+    contrast, if mtcars is a tibble, then mtcars[, "mpg"] would return a one-column
+    tibble. The results are not simplified, allowing you to easily predict what the
+    results of a subsetting operation will return
+
+-   Finally, tibbles don’t support row names. The function rownames_to_column() can be
+    used to convert the row names in a data frame to a variable in a tibble.
+
+-   Tibbles are important because **many popular packages, such as readr, tidyr, dplyr,
+    and purr, save data frames as tibbles.** Although tibbles have been designed to be “a
+    modern take on data frames,” note that they can be used interchangeably with data
+    frames. Any function that requires a data frame can take a tibble and vice versa
+
+```{r}
+mtcars <- as_tibble(mtcars)
+mtcars
+
+
+```
+
+## **Factors**
+
+-   used with qualitative, nominal or ordinal data. (there are not many variants of
+    values)
+
+-   Factors are crucial in R because they determine how data is analyzed and presented
+    visually.
+
+-   **factor(vect, order = , levels=vec, labels=vec) mb labels just for numeric vectors**
+
+-   By default, factor levels for character vectors are created in alphabetical order. For
+    ordered factors, the alphabetical default is rarely sufficient. Be sure the specified
+    levels match your actual data values. Any data values not in the list will be set to
+    missing.
+
+-   Numeric variables can be coded as factors using the levels and labels options
+
+```{r}
+#nominal value
+diabetes <- c('T1', 'T2', 'T1', 'T1')
+diabetes <- factor(diabetes)
+
+#ordinal value
+status <- c('Poor', 'Improved', 'Excellent', 'Poor')
+status <- factor(status, order = T)
+#override the default by specifying a levels option
+status <- factor(status, order = T, levels = c('Poor','Improved','Excellent'))
+
+#numeric variables
+sex <- c(1, 2, 1, 1)
+sex <- factor(sex, levels=c(1, 2), labels=c('Male', 'Female'))
+
+#using factors
+patientID <- c(1, 2, 3, 4)
+age <- c(25, 34, 28, 52)
+diabetes <- c("Type1", "Type2", "Type1", "Type1")
+status <- c("Poor", "Improved", "Excellent", "Poor")
+
+diabetes <- factor(diabetes)
+status <- factor(status, order = T, levels = c('Poor', 'Improved', 'Excellent'))
+patientdata <- data.frame(patientID, age, diabetes, status)
+str(patientdata)
+View(patientdata)
+summary(patientdata)
+```
+
+## if else - управляющие конструкции
+
+Syntax: if (condition) {do something} else if {do another thing} else {do another another
+thing}
+
+condition - это выражение, результатом которого будет логический вектор длины 1 (T, F, NA
+приведет к ошибке)
+
+do something и do another thing - произвольные команды
+
+переносить else на новую строку нельзя
+
+{} - позволяют выполнить несколько команд после else
+
+```{r}
+a <- 0
+
+if (a > 0){
+  print('positive')
+} else if (a < 0) {
+  print('negative')
+} else print('zero')
+
+x <- -4
+if (x > 0) {
+  print('x is a positive')
+} else print('hui') 
+```
+
+```{r}
+if (sqrt(2) > 1.5) {
+  print('Greater!')
+} else {
+  print('Less!')
+}
+```
+
+если нужно условие, длина которого больше 1, то используем ifelse(condition, do smth, do
+another)
+
+если несколько условий, то можно ветвить при помощи вложенных операторов ifelse
+
+```{r}
+ifelse(runif(8) > 0.5, "Орел", "Решка") #если больше 0,5 (условия) то это орел, если меньше то решка, вероятности одинаковые
+
+x <- runif(8)
+ifelse(x > 2/3, 'Stone',
+       ifelse(x > 1/3, 'Scissors', 'Paper'))
+
+ifelse(c(0.5, 0.3, 0.9) > 0.5, "Орел", "Решка")
+```
+
+```{r}
+dice_roll <- function(n) {
+  x <- runif(n)
+  ifelse(x > 5/6, 6,
+         ifelse(x > 2/3, 5,
+                ifelse(x > 1/2, 4,
+                       ifelse(x > 1/3, 3,
+                              ifelse(x > 1/6, 2, 1)))))
+}
+
+dice_roll(5)
+
+#OR
+
+dice_roll <- function(n) {
+  x <- sample(1:6, n, replace = T)
+  print(x)
+}
+
+dice_roll(5)
+```
+
+Множественный выбор (используется редко): switch('character', character1 = smth1,
+character2 = smth2, character = smth, 0) —\> smth
+
+```{r}
+switch('sum',
+       sum = 5 + 5,
+       product = 5 * 5,
+       factorial = factorial(5),
+       0)
+```
+
+## Циклы
+
+Ключевые слова next (пропустить), break (остановить цикл)
+
+repeat {body}
+
+всегда будет выполнен хотя бы раз
+
+```{r}
+i <- 0
+repeat {
+  i <- i + runif(1)
+  print(i)
+  if (i > 5) break
+}
+```
+
+while (condition) {body}
+
+может быть не выполнен ни разу
+
+```{r}
+i <- 25000
+while (i > 150) {
+  i <- i/2
+  print(i)
+}
+```
+
+for (var in vector) {body}
+
+```{r}
+for (i in 1:8) {
+  if (i %% 2 == 0) print(i)
+}
+
+i <- 1:8
+i[i %% 2 == 0]
+```
+
+```{r}
+for (i in letters) {
+  if (i == 'b') next
+  if (i == 'd') break
+  print(i)
+} #letters - массив букв англ алфавита
+```
+
+внутри цикла необходимо вызывать функцию print
+
+```{r}
+for (i in 1:5) i #ничего не выводит
+```
+
+for против векторизации
+
+```{r}
+v <- 1:1e5
+system.time({
+  x <- 0
+  for (i in v) x[i] <- sqrt(v[i])
+}) #оч долго может просчитывать
+
+#решение проблемы:
+system.time({
+  y <- sqrt(v)
+})
+
+identical(x, y)
+```
+
+## Packages and datasets
+
+R - расширяемый язык, основанный на пакетах
+
+Ядро языка - пакет base
+
+Пакеты можно подключать в ходе сессии, часть из них уже подключена. Некоторые пакеты
+зависят друг от друга. Таким образом, все пакеты в CRAN выстраиваются в дерево
+зависимостей. Все имеющиеся зависимости хранятся в спец файле под названием DESCRIPTION
+
+Блиотека в контексте R - это место на диске, где хранятся доступные пакеты.
+
+Посмотреть где R хранит пакеты .libPaths()
+
+Проверить установленные пакеты installed.packages()
+
+Подключить пакет library(pkgname) / require(pkgname) - при отсутствии пакета возвращает
+false
+
+Установка пакета install.packages()
+
+Обновление пакета update.packages()
+
+sessionInfo() - какая версия R, какая платформа, пакеты подключенные к сессии
+
+help(package = "name") - справка по пакету
+
+update.packages() - поиск обновлений
+
+data(name of data frame)
+
+example(data.frame) - покажет пример анализа с предустановленным в R data.frame (mtcars,
+Arthritis)
+
+```{r}
+.libPaths()
+
+installed.packages()
+
+sessionInfo()
+
+update.packages()
+```
+
+```{r}
+library(grid)
+grid.newpage()
+grid.lines()
+```
+
+```{r}
+install.packages("quantmod")
+
+library(randtoolbox)
+library(xts)
+
+help(package = 'xts')
+help(package = 'zoo')
+help(package = 'quantmod')
+```
+
+В R есть встроенные датасеты:
+
+```{r}
+library(help='datasets') #узнаем какие есть датасеты
+
+#получаем датасет mtcars
+data(mtcars) 
+data1 <- mtcars
+names(data1)
+
+library(lubridate)
+```
+
+# Dealing with data!
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+```
+
+Первый чанг самый важный, с него начинается выполнение всех кодов. В этом чанге мы
+определяем как некоторые параметры выполнения rmarkdown документа, записываем все
+библиотеки, которые используем. Определяем тут же все самописные функции, которые будем
+использовать. **Жирный шрифт**. *Курсив* Пакеты могут иметь одинаковые названия функции,
+поэтому R использует функции (с одинаковым названием) из последнего прикрепленного пакета.
+
+## **Data's import/input**
+
+-   Самый распространенный способ получения данных - чтение из файла
+
+-   The definitive guide for importing data in R is the R Data Import/Export manual
+    available at <http://mng.bz/urwn>.
+
+-   R can import data from the keyboard, from text files, from Microsoft Excel and Access,
+    from popular statistical packages, from a variety of relational database management
+    systems, from specialty databases, and from websites and online services
+
+-   ![](images/clipboard-434221939.png){width="468"}
+
+### **Entering data from the keyboard**
+
+-   **For small datasets!**
+
+-   There are two common methods: **entering data through R’s built-in text editor** and
+    **embedding data directly into your code**.
+
+-   **edit(df),** **fix(df)** Steps: 1. Create an empty data frame (or matrix) with the
+    variable names and modes you want to have in the final dataset. 2.Invoke the text
+    editor on this data object, enter your data, and save the results to the data object
+
+-   Note that the result of the editing is assigned back to the object itself. The edit()
+    function operates on a copy of the object. If you don’t assign it a destination, all
+    of your edits will be lost. If you click a column title, the editor gives you the
+    option of changing the variable name and type (numeric or character). You can add
+    variables by clicking the titles of unused columns.
+
+-   Alternatively, you can embed the data directly in your program with **read.table()**
+
+```{r}
+#edit_example
+mydata <- data.frame(age = numeric(0), gender = character(0), weight=numeric(0))
+#Assignments like age=numeric(0) create a variable of a specific mode, but without actual data.
+mydata <- edit(mydata) #shortcut fix(mydata)
+
+#embed the data directly
+mydatatxt <- "
+age gender weight
+25 m 166
+30 f 115
+18 f 120
+"
+mydata <- read.table(header=TRUE, text=mydatatxt)
+```
+
+### **Importing data from a delimited text file**
+
+-   **read.table()** - reads a file in table format and saves it as a data frame. Each row
+    of the table appears as one line in the file.
+
+-   **mydataframe \<- read.table(file, option) -** file is a delimited ASCII file and the
+    options are parameters controlling how data is processed
+
+-   
+
+```{r}
+
+```
+
+### **Importing data from Excel**
+
+## Studying tidyverse (data processing in tidyverse package)
+
+### Reading data
+
+syntax: **read_csv("way") read_csv2("way") read_excel("way")** можно добавить аргумент
+delim = "sign".
+
+обычный csv - разделитель запятая, csv2 разделитель - ;
+
+```{r}
+iris_csv <- read_csv('data/raw/iris_csv.csv')
+
+iris_csv <- read_csv2()
+
+iris_excel <- read_excel()
+```
+
+### Writing data
+
+syntax: write_csv(переменная, путь до нового файла)
+
+```{r}
+write_csv(iris_csv, 'data/interim/iris_csv_ch.csv')
+
+```
+
+### Описание данных, создание статотчета
+
+Функции:
+
+-   read_csv
+
+-   **summary()** - саммари (минимум, максимум, квартили, медиана) поверхностные стат
+    данные
+
+-   **glimpse()** - саммари по данным (название столбцов, тип переменных, примеры)
+
+-   **str(var)** - посмотреть структуры данных, данные по всем переменным (название
+    столбцов, тип переменной, количество, примеры)
+
+-   head() - смотрим верхние строчки дата фрейма
+
+```{r}
+original_data <- read_csv('data/raw/healthcare-dataset-stroke-data.csv')
+```
+
+Запускаем пайплайны для работы с данными.
+
+Берем данные, потом по конвееру двигаются между функциями, соединяемых пайпами %\>% мы
+подали датасет на вход функции glimpse() и далее собираем пайплайн.
+
+```{r}
+original_data %>% 
+  summary()
+
+original_data %>% 
+  glimpse() 
+
+str(original_data) 
+
+original_data %>% 
+  str()
+
+original_data %>% 
+  head()
+```
+
+### Select
+
+Важная функция в tydiverse, она выбирает переменные таблицы и можем их присваивать к нашим
+переменным, чтобы с ними работать можно присваивать также вправо -\>
+
+Можно указывать условие (и так сортировать) несколько условий указываем через &:
+
+-   **select(where(condition))** - выведутся переменные, где condition = T (is.numeric,
+    is.character, function())
+
+-   **select(starts_with('smth'))** - выведутся переменые, начинающиеся с smth
+
+-   **select(ends_with('smth'))** - выведутся переменные, оканчивающиеся на smth
+
+-   **select(contains('smth'))** - выведутся переменные, в названии которых есть smth
+
+-   **select('New name' = var, condition & condition)** - переименовали переменную и
+    отсортировали по ней
+
+-   **na.rm = T** - убираем все NA, чтобы не мешались при анализе, иначе при поиске mean
+    вернется NA.
+
+-   **any/all** - условия хотя бы один/все соответствуют условию
+
+-   **str_detect(string, pattern, negate)** string - character vector, pattern to look
+    for, negate = T (по умолчанию F) - return TRUE if the pattern do NOT match позволяет
+    искать подстроку в векторе из строк - возвращает логическое
+
+-   **map(list(or vect), function, )** - transform input by applying a function to each
+    element of a list of atomic vector and return an object of the same length as the
+    input (returns list). map_lgl(), map_int(), map_dbl(), map_chr() return an atomic
+    vector of the indicated type. Function - named function (mean), anonymous function
+    (function(x) x + 1), formula (\~ list + 1). map_vec(), walk() - calls function for its
+    side-effect and returns the input (invisibly) - this makes it easy to use in a pipe
+
+-   **table(list(data frame), exclude, useNA, dnn, deparse.level, x, row.names,
+    responseName, stringsAsFactors)** uses cross-classifying factors to build a
+    contingency table of counts at each combination of factor levels useNA - whether to
+    include NA values in table ('no', 'ifany', 'always')
+
+```{r}
+original_data %>% 
+  select(bmi)
+```
+
+```{r fig.height=30, fig.width=30, paged.print=TRUE}
+original_data %>% 
+  select(id, gender, bmi) -> new_data
+
+original_data %>% 
+  select(age, work_type, smoking_status)
+
+#вывод только количественных данных
+original_data %>% 
+  select(where(is.numeric))
+
+#вывод только не количественных данных
+original_data %>% 
+  select(!where(is.numeric))
+
+#вывод строковых данных
+original_data %>% 
+  select(where(is.character))
+
+#начало с определенного значения
+original_data %>% 
+  select(starts_with('b')) 
+
+#оканчивается на определенное значение
+original_data %>% 
+  select(ends_with('i'))
+
+#переменная содержит определенное значение
+original_data %>% 
+  select(contains('h')) %>% 
+  select(contains('i'))
+
+#объединение условий
+original_data %>% 
+  select(where(is.numeric) & contains('i'))
+
+#переименование переменной stroke в Group variable и сортировка по ней + выбор только буквенных
+original_data %>% 
+  select('Grouping variable' = stroke, where(is.character) & !contains('_'))
+
+#поиск численных переменных, в которых среднее больше 50
+original_data %>% 
+  select(where(is.numeric)) %>% 
+  select(where(function (x) mean(x, na.rm = T) > 50))
+
+```
+
+walk(1:10, rnorm, n = 10)
+
+?table
+
+```{r}
+#Выбираем только те переменные в значениях которых есть буква r Функция однострочник рассматривает каждый столбец как отдельный вектор, применяется к нему и если после применения результат true, то она выведет нам. 
+original_data %>% 
+  select(where(function(x) any(str_detect(x, 'r')))) %>% 
+  map(table, useNA = 'always')
+#Так можно удобно отлавливать ошибки заполнения, которые есть в данных. map вообще последовательно применяет какую либо функцию
+
+?str_detect
+str_detect("aecfg", letters)
+str_detect('abcd', "p", negate = TRUE)
+
+?map
+1:10 %>% 
+  map(rnorm, n = 10) %>% 
+  map_dbl(mean)
+
+walk(1:10, rnorm, n = 10)
+
+
+```
+
+### Filter
+
+-   Фильтр по строкам, можем выбирать условия (по переменным) по которым эти строки
+    фильтруются
+
+-   **filter(variable == 'value')** - отсортирует дф покажет только те переменные и их
+    значения, где variable = 'value'
+
+-   можно объединять filter(variable == 'value' & variable \> value)
+
+-   **between(variable, lower limit, upper limit)** - выбираем диапазон в переменной
+    variable от lower до upper включая границы интервала
+
+-   **%in%** - значения категориальной (не обязательно, можно и количественной) переменной
+    должны входить в определенное подмножество (указываем вектор диапазона) (**variable
+    %in% c()**)
+
+```{r}
+#фильтр по всем мужчинам
+original_data %>% 
+  filter(gender == 'Male')
+
+#фильтр по не мужчинам
+original_data %>% 
+  filter(gender != 'Male')
+
+#объединение параметров фильтра
+original_data %>% 
+  filter(gender == 'Male' & age >= 40 & stroke == 1)
+
+#between
+original_data %>% 
+  filter(between(age, 30, 50))
+
+#%in%
+original_data %>% 
+  filter(work_type %in% c("Private", "Self-employed")) #значения work_type должны удовлетворять хотябы одному из условий
+original_data %>% 
+  filter(age %in% c(20:40))
+original_data %>% 
+  filter(!(work_type %in% c("Private")))
+```
+
+### **Slice**
+
+-   Не только фильтруем данные, но и берем sample из данных, например, взять строчку с
+    конкретным номером
+
+-   **slice()** - берем конкретные строки
+
+-   **slice_sample(n = or prop = )** - берем рандомные строки (только если не установим
+    seed) n = число строк, prop = процент от нашего дата фрейма. Их используют, чтобы
+    проверить как работает наш код, есть ли какие нибудь ошибки, ибо много строк долго
+    обрабатывать.
+
+-   **slice_min(var)** - берет строки с минимальным значением переменной, with_ties = F -
+    если несколько значений, то получим именно первое, который идет в данных
+
+-   **slice_max(var)** - аналогично предыдущему, но наоборот
+
+```{r}
+#выбираем конкретную строку
+original_data %>% 
+  slice(1000)
+
+#выбираем целую группу строк (границы интервала включены)
+original_data %>% 
+  slice(1000:1100)
+
+#выбираем рандомные строки
+original_data %>% 
+  slice_sample(n = 100)
+
+#выбираем рандомные строки, но будут они одни и те же
+set.seed(1)
+original_data %>% 
+  #slice_sample(n=15)
+  slice_sample(prop = 0.1)
+
+#slice_min
+original_data %>% 
+  slice_min(age, with_ties=F)
+
+#slice_max
+original_data %>% 
+  slice_max(age, with_ties = F)
+```
+
+### **Mutate**
+
+-   изменяем типы переменных (например, если у нас количественные переменные записаны как
+    строка) при помощи функций as.numeric, as.character, as.factor etc. Создаем новые
+    переменные (они идут в конец дф), либо изменяем нужную не придумывая новую переменную
+
+-   **mutate(new_var = as....(var))** внутри mutate можно также использовать %\>% и
+    функции round, str_c
+
+-   **across(c(variable1, variable2), function)** - изменение нескольких переменных сразу
+    (пишем после mutate), либо изменение уже существующей переменной без создания новой
+
+-   **count(var, sort, .drop)** - подсчет уникальных значений, по умолчанию сортировка по
+    возрастанию (отключить sort = F), .drop - позволяет выводить пропущенные значения, а
+    также сочетания значений, которые не встречаются, лучше всегда ставить F. Можно делать
+    сводные таблицы с использованием mutate - в count пишем группирующие элементы - по ним
+    и делается таблица, далее используем mutate, чтобы сделать относительные частоты.
+    Таблица tibble создается.
+
+-   **round()** - функция округления
+
+-   **str_c()** - добавляем символ после нашего значения (в примере добавляем проценты)
+
+```{r}
+original_data %>% 
+  mutate(bmi_num = as.numeric(bmi))
+
+#across
+original_data %>% 
+  mutate(across(c(hypertension, heart_disease, stroke), function(x) factor(x, levels = c('0', '1'), labels = c('no', 'yep'))))
+
+#count
+original_data %>% 
+  count(age, .drop=F)
+
+#count + mutate
+original_data %>% 
+  mutate(across(c(gender, stroke), as.factor)) %>%
+  count(stroke, gender, .drop = F) %>% 
+  mutate('Relative frequency' = (n/sum(n) * 100) %>% round(2) %>% str_c('%'))
+  
+  
+
+```
+
+### **Unite**
+
+-   объединяет значения в переменных, например, когда нужно делать сложные категориальные
+    таблицы. Пишем название нового столбца, пишем столбцы,, которые объединяем, пишем
+    разделитель sep между значениями, для удаления столбцов, которые удалили remove = T.
+    Новый стобец по середине данных возникает?
+
+-   **unite('new_variable', variable1, variable2, sep = '', remove = )**
+
+    ```{r}
+    #example
+    original_data %>% 
+      unite('united-variable', work_type, Residence_type, sep = ',', remove = F)
+    ```
+
+### Separate
+
+-   обратно Unite, разъединить столбцы. Пишем название столбца, который разъединяем,
+    названия столбцов в которые разъединяем (они в виде вектора, их количество должно быть
+    равно количеству частей, которые есть в старом столбце) и какой был сепаратор
+
+-   **separate(new_variable, into = c('variable1', 'variable2'), sep = '')**
+
+```{r}
+#example
+original_data %>% 
+  unite('united_variable', work_type, Residence_type, sep = '__', remove = T) %>% 
+  separate(united_variable, into=c('work_type', 'residence_type'), sep='__')
+
+```
+
+### **Group_by + summarize**
+
+-   так делаем описательные статистики
+
+-   сначала пишем **group_by(variable)**
+
+-   Затем пишем **summarise** и создаем новый столбик, в котором будет средний возраст -
+    получается новый датафрейм, в котором первый стобик - группирующая переменная, второй,
+    третий и тд - соответствующее значение статистики
+
+    ```{r}
+    original_data %>% 
+      group_by(stroke) %>% 
+      summarise(age_mean = mean(age, na.rm = T),
+                glucose_max = max(avg_glucose_level, na.rm = T))
+    ```
+
+### **Pivot_longer**
+
+-   длинный формат данных, самый чистый формат - по сути, когда каждая строка являет собой
+    уникальное сочетание значений. Например, если для какого-то субъекта есть несколько
+    визитов, то для длинного формата у нас будет переменная субъект (его id), переменная
+    визит, переменные измеренных параметров
+
+    ```{r}
+    original_data %>% 
+      mutate(across(bmi, as.numeric)) %>% 
+      select(id, age, avg_glucose_level, bmi) %>% 
+      pivot_longer(!id) -> data_long
+
+    ```
+
+### **Pivot_wider**
+
+-   делаем как бы исходный вид датафрейма можно разобраться с тем, чтобы R находил
+    повторяющиеся строки
+
+    ```{r}
+    data_long %>% 
+      pivot_wider(names_from = name, values_from = value)
+    ```
+
+### Flextable
+
+-   это библиотека, она хорошо взаимодействует с R.markdown, все что выведут функции этой
+    библиотеки будет выведено как самые обычные таблицы используя ее можно по разному
+    менять внешний вид таблицы
+
+    ```{r}
+    original_data %>% 
+      mutate(across(c(gender, stroke), as.factor)) %>% 
+      count(stroke, gender, .drop = F) %>% 
+      mutate('Relative frequency' = ((n/sum(n)) * 100) %>% round(2) %>% str_c('%'), across(stroke, function(x) x %>% as.character() %>% factor(levels = c('0', '1'), labels = c('No', 'Yes')))) %>% 
+      rename('Absolute frequency' = n, 'Gender' = gender, Stroke = stroke) %>% 
+      flextable() %>% 
+      theme_box() %>% 
+      align(align = 'center', part = 'all') %>% 
+      merge_v('Stroke')
+      
+    ```
+
+Таблица с некоторыми стат описаниями (не готово)
+
+```{r}
+original_data %>% 
+  mutate(across(bmi, as.numeric)) %>% 
+  select(age, bmi, gender, stroke) %>% 
+  tbl_summary(by = 'stroke') %>% 
+  add_p()
+```
+
+## Data analysis
+
+**mean(var)** - среднее в векторе var
+
+**sd(var)** - стандартное отклонение var, na.rm = T - убирает все NA до начала анализа (по
+умолчанию F)
+
+**cor(var1, var2)** - поиск корреляции между переменными 1 и 2
+
+Easy and basic example
+
+```{r}
+age <- c(1, 3, 5, 2, 11, 9, 3, 9, 12, 3)
+weight <- c(c(4.4, 5.3, 7.2, 5.2, 8.5, 7.3, 6.0, 10.4, 10.2, 6.1))
+mean(weight)
+sd(weight)
+b <- cor(age, weight)
+plot(age, weight)
+
+```
+
+### **Chi-square**
+
+обращения к значениям в тесте, обращения к ним через ключевые методы посредством знака
+доллар "\$" тут "а" - это наша передаваемая таблица chisq.test(a)\$statistic  -  значение
+нашего хи-квадрат chisq.test(a)\$parameter - степени свободы chisq.test(a)\$p.value -
+собсвенно, наше P  - значение
+
+```{r}
+t <- rbind(c(10, 6), c(5, 15))
+chisq.test(t)$expected
+
+students <- rbind(c(25, 9), c(11, 6))
+chisq.test(students)
+```
+
+Графики для хи-квадрата
+
+Разберемся, как здесь отображены наши данные. Ширина и высота каждого прямоугольника
+пропорциональны наблюдаемым частотам в соответствующих строках и столбцах. Цвет
+прямоугольника показывает величину стандартизированного остатка; если она по модулю больше
+2, то прямоугольник будет полупрозрачным, если больше 4, то соответствующий прямоугольник
+будет закрашен.
+
+***Итого:***
+
+***- размер прямоугольников  соответствует количеству наблюдений.***
+
+**- цвет прямоугольников - величине значимости отклонения ожидаемых и наблюдаемых частот в
+этой ячейке.**
+
+**- если значения стандартизированных остатков больше 3х, можно считать, что в этой ячейке
+зафиксированы значимые отклонения.**
+
+```{r}
+patients <- rbind(c(25, 1), c(3, 30))
+colnames(patients) <- c('yes', 'no')
+rownames(patients) <- c('Placebo', 'Aspirin')
+mosaicplot(patients, color = T, shade = T, ylab = 'Thrombosis', xlab <- 'Group', cex.axis = 1, main = '')
+```
+
+### **Критерий фишера**
+
+Когда мало значений
+
+```{r}
+fisher.test(cbind(c(1,3), c(3,1)))
+```
+
+### **Linear regression**
+
+```{r}
+data(mtcars)
+lmfit <- lm(mpg~wt, data=mtcars)
+plot(lmfit)
+cooks.distance(lmfit)
+```
+
+## Data visualization
+
+```{r}
+#необходимые библиотеки
+
+library(tidyverse)
+library(ggExtra)
+library(ggpubr)
+```
+
+Подгружаем датасет
+
+```{r}
+hogwarts <- read_csv('data/raw/hogwarts.csv')
+hogwarts
+View(hogwarts)
+```
+
+Визуализация нужна, чтобы красиво показывать данные, тк просто отсматривать таблицы не
+удобно и занимает много времени. Эксплоративная и коммуникативная цели.
+
+### Одна количественная переменная
+
+Как мы можем показать на рисунке одну количественную переменную?
+
+ggplot для рисования. функция **geom_smth** дает большой выбор того, как визуализировать.
+соединяем разные куски через +
+
+Эстетитки это некий тоннель - то, что мы берем из наших данных и хотим перенести на график
+
+**fill** - цвет графика, **colour** - цвет границ столбцов, **bins** - количество
+столбиков
+
+```{r}
+
+```
+
+\
+
+## Distributions (working with discrete, categorical data)
+
+### Poisson distribution
+
+If we want to know how often 3 mutations could occur under the Poisson(5) model, we can
+use an R function to generate the probability of seeing x=3 events, taking the value of
+the **rate parameter** of the Poisson distribution, called lambda (λ), to be 5.
+
+The Poisson distribution is a good model for rare events such as mutations. Other useful
+probability models for discrete events are the Bernoulli, binomial and multinomial
+distributions.
+
+Syntax: **dpois(x, lambda, log)** **x** - vector of (non-negative integer) quantiles,
+**lambda** - vector of (non-negative) means, **log** - logical if T probabilities p are
+given as log(p)
+
+dpois - density, distribution function, quantile function and random generator for the
+Poisson distribution with parameter lambda. Возвращает вероятность того, что случайная
+величина в распределении Пуассона примет значение х при заданном параметре lambda
+
+Mathematical theory tells us that the Poisson probability of seeing the value x is given
+by the formula (e\^−λ\*λ\^x)/x!. 
+
+```{r}
+dpois(x = 3, lambda = 5)
+
+distr_P <- dpois(0:12, lambda =5)
+
+barplot(distr_P, names.arg = 0:12, col = 'red')
+```
+
+### Using discrete probability models
+
+A point mutation can either occur or not; it is a binary event. The two possible outcomes
+(yes, no) are called the **levels** of the categorical variable (maybe more than 2
+levels).\
+
+When we measure a categorical variable on a sample, we often want to tally the frequencies
+of the different levels in a vector of counts. R has a special encoding for categorical
+variables and calls them **factors**. Here we capture the different blood genotypes for 19
+subjects in a vector which we tabulate.
+
+factor(vect, levels)
+
+|  |  |
+|---------------------------------------------|---------------------------------------------|
+| `levels` | an optional vector of the unique values (as character strings) that `x` might have taken. |
+
+```{r}
+genotype <- c("AA","AO","BB","AO","OO","AO","AA","BO","BO",
+             "AO","BB","AO","BO","AB","OO","AB","BB","AO","AO")
+table(genotype)
+
+#creating a factor
+genotypeF <- factor(genotype)
+levels(genotypeF) #levels of factor
+?factor
+```
+
+On creating a *factor*, R automatically detects the levels. You can access the levels with
+the `levels` function.
+
+#### **Bernoulli trials**
+
+# Useful
+
+регулярные выражения в R
+<https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html>
+
+очистка консоли ctrl + L
+
+создание чанка ctrl + alt + i
+
+оздание пайпа ctrl + shift + m
+
+rnorm
+
+runif - функция возвращает независимое испытание случайной величины, которая равномерно
+распределена от 0 до 1
+
+system.time - функция, чтобы замерить время исполнения кода
+
+identical - проверка на сходство
+
+sample(х, n, replace = T, prob = ) - берет сэмплы из указанного вектора х n раз, prob -
+вероятностные весы, можно изменить вероятность появления элементов
+
+example('function') - показывает различные примеры применения функции
+
+vignette() function are practical introductory articles provided in PDF or HTML format
+
+set.seed() - для того чтобы рандомный генератор давал одни и те же значения
+
+paste0() - совмещает текст и числовой вектор, на выходе текстовый вектор
+
+barplot(data, names.arg = , col =) - создает гистограмму с данными, плюс указываем имена
+баров и их цвет
+
+table(vect) - создает таблицу с подсчетом какие элементы сколько встречались в векторе
+
+Небольшая добавка: в R есть три похожих ключевых слова, NA, NaN и NULL. Они различаются по
+смысловой нагрузке. 
+
+-   NA -- это пропущенное значение ("not available"). Например, респондент не ответил на
+    все вопросы предложенной анкеты, или данные с метеостанции за определённый период
+    потерялись из-за сбоя оборудования. NA в этом случае обозначает, что эти данные
+    существуют и имеют смысл, но их не удалось узнать.
+
+-   NaN -- "not-a-number" -- результат недопустимой арифметической операции, например 0/0
+    или Inf - Inf.
+
+-   NULL -- отсутствие объекта, "пустота". Применяется в тех случаях, когда объект
+    действительно не существует, не может иметь осмысленного значения.
+
+Для проверки значений есть три функции, is.na, is.nan и is.null, соответственно.
+
+The period (.) has no special significance in object names. The dollar sign (\$) has a
+somewhat analogous meaning to the period in other object-oriented languages and can be
+used to identify the parts of a data frame or list. For example, A\$x refers to variable x
+in data frame A.
+
+R doesn’t provide multiline or block comments. You must start each line of a multiline
+comment with #. For debugging purposes, you can also surround code that you want the
+interpreter to ignore with the statement if(FALSE){...}. Changing the FALSE to TRUE allows
+the code to be executed
+
+Assigning a value to a nonexistent element of a vector, matrix, array, or list expands
+that structure to accommodate the new value. For example, consider the following:
+
+```{r}
+x <- c(1, 2, 3)
+x[5] <- 4
+x
+```
+
+Variables can’t be declared. They come into existence on first assignment.
+
+To learn more, see John Cook’s excellent blog post, “R Language for Programmers”
+(<http://mng.bz/6NwQ> ). Programmers looking for stylistic guidance may also want to check
+out Hadley Wickham’s The Tidyverse Style Guide ( <https://style.tidyverse.org/> ).
+
+```{r}
+j <- 0
+for(i in 1:1000){
+  x <- rnorm(30)
+  p <- t.test(x)$p.val
+  if(p < 0.05) {
+    j <- j + 1
+  }
+}
+print(j)
+rm(x, j, i, p)
+```
+
+```{r}
+install.packages(kableExtra)
+```
+
+```{r}
+?sample
+```
+
+```         
+```

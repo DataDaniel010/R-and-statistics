@@ -1,0 +1,498 @@
+---
+title: "basicDatavisBI2024"
+author: "B.V. Sotnikov"
+date: ""
+output: html_document
+---
+
+## Прелиминарии
+
+Настраиваем rmd, подгружаем пакеты
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, fig.width=16, fig.height=10)
+# install.packages("ggExtra")
+# install.packages("ggpubr")
+library(tidyverse)
+library(ggExtra)
+library(ggpubr)
+```
+
+Подгружаем датасет
+
+```{r dataLoading}
+hogwarts <- read_csv("data/hogwarts.csv")
+hogwarts
+```
+
+Визуализация нужна, чтобы красиво показывать данные, тк просто отсматривать таблицы не удобно и занимает много времени. Эксплоративная и коммуникативная цели.
+
+## Действо
+
+![](images/owl1.jpg){width="2024"}
+
+![](images/owl2.png)
+
+![](images/shrek.png)
+
+### Страшный блок с кодом
+
+```{r ggplotIntro, fig.width=20, fig.height=14}
+fillValues <- c("#C50000", "#ECB939", "#41A6D9", "#1F5D25")
+names(fillValues) <- hogwarts %>% select(house) %>% pull() %>% unique()
+gridLab <- c("Девочки", "Мальчики")
+names(gridLab) <- hogwarts %>% select(sex) %>% pull() %>% unique() %>% sort()
+
+ggplot(hogwarts, aes(y = house,
+                     x = result))+
+geom_violin(aes(fill = house))+
+geom_boxplot(width = 0.05,
+             colour = "grey50")+
+geom_vline(xintercept = 0,
+           linetype = "dashed",
+           colour = "salmon",
+           linewidth = 2)+
+labs(
+title = "Баллы студентов Хогвартса",
+subtitle = "Распределение числа баллов у студентов различных факультетов Хогвартса в 2023-2024 учебном году",
+y = "Колледж",
+x = "Количество очков",
+fill = "Колледж",
+caption = "Источник: нездоровая фантазия автора лекции"
+   )+
+facet_grid(. ~ sex,
+           labeller = labeller(sex = gridLab))+
+theme_bw()+
+theme(plot.title = element_text(size=32,
+                              hjust=0.5,
+                              family = "Times new roman"),
+    plot.subtitle = element_text(size = 20,
+                                 hjust=0.5,
+                                 colour = "#7D5535"),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size=20,
+                               family = "Times new roman"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size=29,
+                                family = "Times new roman"),
+    legend.title = element_text(size=25,
+                                family = "Times new roman"),
+    legend.text = element_text(size=25,
+                               family = "Times new roman",
+                               face = "italic"),
+    strip.text.x = element_text(size = 25,
+                                family = "Times new roman"))+
+scale_fill_manual(name = "Факультет",
+                  labels = c("Гриффиндор", "Пуффендуй", "Когтевран", "Слизерин"),
+                  values = fillValues)+
+scale_x_continuous(breaks = seq(-400, 400, by = 50))+
+  annotate(geom = "segment", arrow = arrow(), y = rep("Ravenclaw",2), yend = rep("Slytherin",2), x = c(250, -250), xend = c(250, -250), linewidth = 1.3, colour = "black")+
+  coord_flip()
+```
+
+### Одна количественная переменная
+
+Как мы можем показать на рисунке одну количественную переменную?
+
+ggplot для рисования. функция geom_smth дает большой выбор того, как визуализировать. соединяем разные куски через +
+
+Эстетитки это некий тоннель - то, что мы берем из наших данных и хотим перенести на график
+
+fill - цвет графика, colour - цвет границ столбцов, bins - количество столбиков
+
+```{r gh1}
+ggplot(hogwarts) +
+  geom_histogram(aes(x = result),
+                 fill = 'maroon',
+                 colour = "black",
+                 bins = 15) +
+  theme_bw()
+
+```
+
+![](images/colorbynames.png)
+
+Делаем гистограмму сами
+
+```{r histogramSelf}
+read_csv("data/task1Hist.csv")
+
+ggplot(hogwarts) +
+  geom_histogram(aes(x = Herbology_exam),
+                 fill = "honeydew1",
+                 colour = "firebrick4",
+                 bins = 15) +
+  theme_bw()
+```
+
+Легким движением, гистограмма превращается...
+
+```{r density}
+ggplot(hogwarts) +
+  geom_density(aes(x = result),
+                 fill = "honeydew1",
+                 colour = "firebrick4") +
+  theme_bw()
+```
+
+![](images/box.png)
+
+Чтобы сделать боксплот вертикальным в aes x меняем на y
+
+Чтобы сделать линии пошире linewidth
+
+```{r boxPlot, fig.width=10}
+ggplot(hogwarts) +
+  geom_boxplot(aes(y = result),
+                 fill = "honeydew1",
+                 colour = "firebrick4",
+               linewidth = 1) +
+  theme_bw()
+```
+
+### Сравнение нескольких количественных переменных
+
+чтобы видеть графики разных переменных наложенные друг на друга используем прозрачность alpha. Неплохо но не идеально
+
+```{r twoDistr}
+ggplot(hogwarts) +
+  geom_density(aes(x = Transfiguration_exam),
+                 fill = "red",
+                 colour = "firebrick4",
+                 alpha = 0.5) +
+  geom_density(aes(x = Potions_exam),
+                 fill = "lightgreen",
+                 colour = "firebrick4",
+                 alpha = 0.5) +
+  theme_bw()
+```
+
+в aes, чтобы не было ошибки если в имени переменной пробелы используем символы на букве ё: \`\`
+
+```{r}
+read_csv("data/task2Dens.csv")
+
+ggplot(hogwarts) +
+  geom_density(aes(x = Herbology_exam),
+               fill = "green",
+               colour = "lightgray",
+               alpha = 0.5) +
+  geom_density(aes(x = `Study of ancient runs_exam`),
+               fill = "red",
+               colour = "lightgray",
+               alpha = 0.5) +
+  geom_density(aes(x = Divinations_exam),
+               fill = "turquoise4",
+               colour = "lightgray",
+               alpha = 0.5) +
+  theme_classic()
+
+  
+
+```
+
+```{r threeDistr}
+
+```
+
+чтобы раскрасить боксплоты разными цветами перенесем fill в aes и приравняем ее к тому, что дает нам разные боксплоты (по оси х). Чтобы убрать точки выбросов (чтобы они не дублировали jitter) есть outliers = F
+
+справка на полный экран ctrl + shift + 3, вернуться обратно ctrl + shift + 1
+
+width - ширина боксплотов.
+
+Что лучше в гистограмме, что лучше в боксплоте? Гистограмма показывает распределение по линии, можно посмотреть где больше значений, где меньше, боксплот - собирательная и упрощенная модель, сразу видим некую статистику на боксплоте - медиану, квартили, дисперсию, но ничего не можем сказать о форме распределения.
+
+geom_jitter - облако точек значений, по оси у положение имеет значение - отражает значение, по оси х положение смысла не имеет. Видим распределение (тоже можем сузить через width). Размер можем менять используя size. Точки генерятся рандомно, чтобы зафиксировать используем set.seed()
+
+geom_point - просто точки значений в линию, не так наглядно.
+
+aes можно выносить за скобку - в шапку к переменной выборки, если она дублируется у визуализаций
+
+```{r boxFactor}
+set.seed(100)
+
+ggplot(hogwarts, aes(x = house, y = result)) + 
+  geom_boxplot(aes(fill = house),
+               width = 0.3,
+               outliers = F) +
+  geom_jitter(width = 0.2,
+              size = 3)
+```
+
+Violin plot объединяет в себе boxplot и jitter, если в fill вместо house напишем sex, то каждый график разобъется на два и будут выборки для девочек и мальчиков. Можем присвоить к переменной
+
+чтобы сохранить график надолго есть функция ggsave(way, variable, width, height, dpi)
+
+```{r violin2factors}
+ggplot(hogwarts) + 
+  geom_violin(aes(x = house, y = result, fill = sex)) +
+  theme_bw() -> violinPlotHogwarts
+   
+ggsave("images/violinPlotHogwarts.png",
+       violinPlotHogwarts,
+       width = 14,
+       height = 10,
+       dpi = 500)
+
+```
+
+```{r boxSelf}
+read_csv("data/task3Box.csv")
+
+ggplot(hogwarts) +
+  geom_boxplot(aes(x = sex, y = Herbology_exam, fill = blood_status),
+               width = 0.4,
+               outliers = F) + 
+  geom_jitter(aes(x = sex, y = Herbology_exam),
+              size = 3,
+              width = 0.2) +
+  theme_light()
+
+
+```
+
+```         
+```
+
+### Одна факторная переменная
+
+Если имеем категориальную переменную (пол), то можно визуализировать при помощи стодбчатой диаграммы или барплота
+
+Как переименовать оси: функция labs(title, subtitle, caption, x, y, fill)
+
+Также работа с осями: scale
+
+scale_fill_continuous - когда по оси расположена количественная непрерывная переменная
+
+scale_fill_discrete - факторная, категориальная, строковая переменная
+
+scale_fill_manual - задаем вручную.
+
+Также можем менять название оси и метки в scale_fill (обозначения слева от графика) name = " ", labels = c().
+
+Также можем менять названия меток на конкретной оси scale_x_discrete(labels = c())
+
+breaks - число отсечек на оси, seq - принимает начальное значение, конечное значение и l = n на которые нужно разделить этот отрезок
+
+Если берем scale_fill_manual, то можем вручную менять цвета баров
+
+```{r pub}
+ggplot(hogwarts) + 
+  geom_bar(aes(x = house, fill = house),
+           colour = "grey",
+           linewidth = 2)+
+  labs(
+    title = "Распределение студентов Хогвартса по факультетам",
+    subtitle = "2023-2024 учебный год",
+    caption = "Источник данных",
+    x = "Факультет",
+    y = "Число студентов",
+    fill = "Колледж"
+  ) + 
+  scale_fill_manual(name = "Факультет", 
+                      labels = c("Гриффиндор", "Пуффендую", "Когтевран", "Слизарен"), values = c(c("Gryffindor" = "#C50000",
+   "Hufflepuff" = "#ECB939", 
+   "Ravenclaw" = "#41A6D9", 
+   "Slytherin" = "#1F5D25"))) +
+   scale_x_discrete(labels = c("Гриффиндор", "Пуффендую", "Когтевран", "Слизарен")) +
+  scale_y_continuous(breaks = seq(0, 80, l = 9))
+  
+###############################
+# c("Gryffindor" = "#C50000",
+#   "Hufflepuff" = "#ECB939", 
+#   "Ravenclaw" = "#41A6D9", 
+#   "Slytherin" = "#1F5D25")
+################################
+```
+
+![](images/hexcolorggplot.png){width="500"}
+
+### 2 факторные переменные
+
+Чтобы на графике показать доли, проценты есть функция position. Position = "fill" отнормирует каждый факультет на 1, по оси у будут не штуки студентов, а доли студентов. Position = "dodge"/"dodge2" - отдельные группы будут в виде отдельного столбика в рамках одной переменной, количество абсолютное.
+
+через names даем имена - дали имена по цветам, далее вытащили факультеты hogwarts %\>% pull(house) %\>% unique() и присовили.
+
+```{r 2factors}
+fillValues = c("#C50000", "#ECB939", "#41A6D9","#1F5D25")
+names(fillValues) <- hogwarts %>% pull(house) %>% unique()
+
+ggplot(hogwarts) + 
+  geom_bar(aes(x = blood_status, fill = house),
+           colour = "grey",
+           position = "fill",
+           linewidth = 2) +
+  scale_fill_manual(values = fillValues) -> barplot2
+```
+
+```{r barSelf}
+read_csv("data/task4Bar.csv")
+
+ggplot(hogwarts) +
+  geom_bar(aes(x = house, fill = sex),
+           position = "fill") +
+  scale_y_continuous(breaks = seq(0.00, 1.00, l = 21)) +
+  theme_classic()
+```
+
+### Фактор с большим количеством градаций / тайм-серия / "недлинная" количественная переменная
+
+```{r}
+
+```
+
+### 2 количественные переменные (1 факторная в подарок)
+
+Визуализируем при помощи точечной диаграммы (диаграммы рассеяния) geom_point, форма точек выбирается при помощи shape (всего 25 форм), stroke - толщина контура.
+
+Можем разделить переменные при помощи формы - в aes shape / colour = smth (лучше colour, либо сочетать)
+
+На диаграмме рассеяния точки могут накладываться друг на друга (overplotting), поэтому используем функцию position = "jitter" - накладывается случайный шум, более тонко настроить: position = position_jitter(width = 2, height = 2) - минусы неточно (появляются те, у кого 101 и 102 балла)
+
+```{r 2num}
+ggplot(hogwarts) +
+  geom_point(aes(x = Charms_exam, y = Transfiguration_exam, fill = house),
+             size = 5,
+             shape = 23,
+             colour = "black",
+             stroke = 1.5,
+             position = position_jitter(width = 2, height = 2)) + 
+  theme_bw()
+
+
+```
+
+Формы точек:
+
+![](images/ggplot2shapey.png){width="1200"}
+
+```{r scatterSelf}
+read_csv("data/task5Scatter.csv")
+
+ggplot(hogwarts) +
+  geom_point(aes(x = Herbology_exam, y = Arythmancy_exam, fill = house),
+             shape = 23,
+             size = 6.0,
+             position = position_jitter(width = 3.0, height = 2.5)) +
+  theme_minimal() -> pointPlot1
+```
+
+### Так что там с третьей факторной переменной?
+
+Фасеты позволяют нам разбить наш график на отдельные панельки, которые будут отображать данные с каким то условием. Функция facet_grid(x\~y). Если по какой либо осей не разбиваем, то ставим . добавили разбивку по полу еще. Получили два барплота для девочек и мальчиков (можем менять местами аргументы между которыми тильда и будет либо по строкам или по столбцам разбиение - применяем разное для разных графиков)
+
+Можно по разному разбивать делать разные сетки
+
+```{r grid}
+barplot2 +
+  facet_grid(wand ~ sex)
+
+ggplot(hogwarts) +
+  geom_histogram(aes(x = result),
+                 fill = 'maroon',
+                 colour = "black",
+                 bins = 15) +
+  theme_bw() +
+  facet_grid(sex ~ .)
+```
+
+facet_wrap таже делает сетку, важно обернуть в переменную vars. Пытается выстроить ячеечки наиболее компактным образом, как будто бы делает змейку
+
+```{r wrap}
+barplot2 +
+  facet_wrap(vars(course))
+
+pointPlot1 +
+  facet_wrap(vars(course))
+
+```
+
+## Фиоритуры
+
+![](images/theme.png)
+
+Тема ручная настройки, можно настроить оси, фон, панель (участок где рисунок), засечки, метки, легенда, ключи
+
+element_text чтобы подписать ось, можно element_rect() - дает прямоугольнички element_blank - обращает элемент нашей темы в ничто, element_unit() - для черточек, палочек
+
+**axis.title** - название оси, **axis.text** - текст на оси (можем менять размер, угол наклона, делать текст жирным (face = "bold"), курсивом и тд, можем настроить расположение элемента со сдвигом (vjust = ) - сдвиг по горизонтали (если ось у) (hjust = ) - сдвиг по горизонтали (если ось х), **labs(title = )** - название графика, **axis.ticks** - засечки на осях
+
+можно менять характеристики любого элемента на экране
+
+```{r theme}
+pointPlot1 +
+  labs(title = "Название") +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 20, 
+                               angle = 25, 
+                               face = "bold"),
+    axis.title.y = element_text(vjust = 0.5, 
+                                size = 30),
+    plot.title = element_text(hjust = 0.5,
+                              size = 30),
+    axis.ticks.length.x = unit(0.3, "cm"),
+    legend.position = "inside",
+    legend.justification = "top",
+    legend.direction = "horizontal",
+    panel.background = element_rect(fill = "red",
+                                    colour = "blue",
+                                    linetype = "dotted",
+                                    linewidth = 4),
+    
+  )
+
+```
+
+Аннотация
+
+Текст, прямоугольники, стрелки
+
+annotate("rect", xmin, xmax, ymin, ymax) - прямоугольник для аннотации (выделения чего то)
+
+annotate("segment", x, xend, y, yend, size, arrow = arrow()) - стрелочка для указания на какие нибудь данные
+
+annotate("text", x, y, size, colour, label) - текст
+
+Так можем подсветить какие-нибудь данные
+
+```{r annotations}
+pointPlot1 +
+  annotate("rect", xmin = 20, xmax = 40, ymin = 50, ymax = 70, 
+           alpha = 0.4, fill = "lightblue") +
+  annotate("segment", x = 92, xend = 97, y = 100, yend = 100, 
+           size = 3, arrow = arrow()) +
+  annotate("text", x = 85, y = 100,
+           size = 8, colour = "red",
+           label = "Dickhead")
+```
+
+## Кунштюки
+
+![](images/shrek2.png)
+
+Объединение графиков в один
+
+используем функцию ggarrange, указываем список графиков, число рядов, колонок, можно менять соотношение высот графиков (heights), широт графиков (widths)
+
+```{r arrange}
+ggarrange(plotlist = list(pointPlot1, barplot2),
+          nrow = 1, ncol = 2, widths = c(3, 1))
+```
+
+Добавление маргинальных распределений. Что если мы хотим посмотреть распределение отдельных переменных. ggMarginal(graph, type, xparams, yparams, margins) Не дружит с фасетами. Margins убирает график по указнной оси. Если больше чем две зависимые переменные, то не покажет, что может исказить.
+
+```{r marginal}
+ggMarginal(pointPlot1, type = "histogram", xparams = list(fill = "hotpink"), margins = "y") 
+```
+
+## Дополнительные источники
+
+-   [Сайт с примерами графиков и полезными советами](https://r-graph-gallery.com/)
+-   [Оригинальная статья с изложением философии ggplot](https://byrneslab.net/classes/biol607/readings/wickham_layered-grammar.pdf)
+-   [Документация ggplot](https://ggplot2.tidyverse.org/)
+-   [Учебник по data-science от авторов ggplot](https://r4ds.hadley.nz/)
+-   [Учебник по ggplot от авторов ggplot (в процессе написания)](https://ggplot2-book.org/)
+-   [Телеграм-канал про визуализацию (не в биомедицине, и не на R, но от этого не менее хороший)](https://t.me/nastengraph)
+-   [Шпаргалка по ggplot2](https://rstudio.github.io/cheatsheets/html/data-visualization.html)

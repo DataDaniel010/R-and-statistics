@@ -1,0 +1,8 @@
+"0","# Подготовим данные"
+"0","pima_example <- pima_clear %>% "
+"0","  select(mass, triceps)"
+"0",""
+"0","# Визуализируем"
+"0","ggplot() +"
+"0","  geom_point(data = pima_example, aes(x = mass, y = triceps)) +"
+"0","  theme_minimal()"

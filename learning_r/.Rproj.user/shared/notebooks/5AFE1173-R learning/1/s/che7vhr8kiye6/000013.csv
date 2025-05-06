@@ -1,0 +1,15 @@
+"0","original_data %>% 
+  mutate(bmi_clear = na.rm(bmi))
+"
+"1","[1m[33mError[39m in `mutate()`:[22m
+[38;5;250m[36mℹ[38;5;250m In argument: `bmi_clear = na.rm(bmi)`.[39m
+[1mCaused by error in `na.rm()`:[22m
+[33m![39m не могу найти функцию ""na.rm""
+Backtrace:
+[90m 1. [39moriginal_data %>% mutate(bmi_clear = na.rm(bmi))
+[90m 3. [39m[1m[94mdplyr:::mutate.data.frame([39m[22m., bmi_clear = na.rm(bmi)[1m[94m)[39m[22m
+[90m 4. [39mdplyr:::mutate_cols(.data, dplyr_quosures(...), by)
+[90m 6. [39mdplyr:::mutate_col(dots[[i]], data, mask, new_columns)
+[90m 7. [39mmask$eval_all_mutate(quo)
+[90m 8. [39m[1mdplyr[22m (local) eval()
+"

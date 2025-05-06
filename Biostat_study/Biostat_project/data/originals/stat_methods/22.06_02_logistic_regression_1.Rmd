@@ -1,0 +1,280 @@
+---
+title: '02: Classification'
+author: "Jelena Čuklina"
+date: "2023-05-21"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r libs}
+library(tidyverse)
+library(GGally)
+library(pROC)
+library(yardstick)
+library(Hmisc)
+```
+```{r}
+theme_set(theme_bw())
+```
+
+
+```{r}
+extra <- TRUE
+if (extra) {
+  library(broom.helpers)
+}
+```
+
+# load data 
+```{r load-data}
+loc <- "http://archive.ics.uci.edu/ml/machine-learning-databases/"
+ds  <- "breast-cancer-wisconsin/breast-cancer-wisconsin.data"
+url <- paste(loc, ds, sep="")
+
+breast <- read.table(url, sep = ",", header=FALSE, na.strings = "?")
+names(breast) <- c("ID", "clumpThickness", "sizeUniformity","shapeUniformity", 
+                   "maginalAdhesion", "singleEpithelialCellSize", "bareNuclei",
+                   "blandChromatin", "normalNucleoli", "mitosis", "class")
+```
+
+
+```{r}
+df <- breast[-1]
+df$class <- factor(df$class, levels=c(2,4), labels = c("benign","malignant"))
+df$class_numeric <- ifelse(df$class == "benign", 0, 1)
+```
+
+
+```{r}
+set.seed(1234)
+train <- sample(nrow(df), 0.7*nrow(df))
+df.train <- df[train,]
+df.validate <- df[-train,]
+```
+
+# Exploratory analysis ----------------------------------------------------
+```{r describe}
+Hmisc::describe(df.train)
+```
+
+```{r plot-ggpairs}
+gg_pairs <- ggpairs(df.train, aes(color = class))+theme_bw() #do any distributions concern you?
+gg_pairs
+```
+
+Извлекаем непрерывные переменные:
+```{r sd}
+numeric_cols <- sapply(df.train, is.numeric)
+sapply(df.train[, numeric_cols], sd)
+```
+bareNuclei - NA на стандратном отклонении стоит задуматься
+
+получаем количество отсутствующих значений
+```{r na-vals}
+sum(is.na(df.train[['bareNuclei']]))
+```
+Убираем кейсы с NA (либо можно выбросить переменную):
+```{r complete-cases}
+df.train <- df.train[complete.cases(df.train), ]
+```
+
+```{r plot-ggpairs-noMissing}
+gg_pairs <- ggpairs(df.train, aes(color = class))+theme_bw() #do any distributions concern you?
+gg_pairs
+```
+
+# univariate model строим одномерные модели
+```{r }
+gg_univariate <- ggplot(data = df.train, aes(x = clumpThickness, y = class)) +   
+  geom_jitter(width = 0.1, height = 0.05, alpha = 0.5) #why did we choose clumpThickness from ggpairs?
+gg_univariate +theme_bw(base_size = 30)
+
+```
+для классификации как видим переменная clumpThickness сгодится. 
+
+Нужно перевести классы в числа (для R):
+```{r}
+gg_univariate1 <- ggplot(data = df.train, aes(x = clumpThickness, y = class_numeric)) +   
+  geom_jitter(width = 0.1, height = 0.05, alpha = 0.5)+ #why did we choose clumpThickness from ggpairs?
+  scale_y_continuous(breaks=c(0, 1)) +theme_bw(base_size = 30)
+gg_univariate1 
+```
+
+
+# Fitting classification model ------------------------------------------
+строить просто линию - странная идея, поэтому можно построить более точную прямую (method = "glm")
+```{r fit-univariate}
+gg_univartiate_wFit <- gg_univariate1  +   
+  geom_smooth(method = "lm", se = FALSE, fullrange=TRUE) +   
+  geom_smooth(method = "glm", se = FALSE, color = "red", fullrange=TRUE,  
+              method.args = list(family = "binomial"))
+gg_univartiate_wFit
+```
+
+univariate model одномерная модель
+family - подтип модели
+```{r}
+#Logistic regression with glm()
+# the following chunk doesn't work as expected :((
+# #univariate model
+fit.logit_univariate <- glm(class_numeric ~ clumpThickness, data=df.train, family = binomial())
+summary(fit.logit_univariate)
+```
+В логарифмическом отношении шансов увеличение clumpThickness на единицу увеличивает log отношения шансов на 0,95. 
+
+checking the fit
+```{r predict}
+df.train$probability <-predict(fit.logit_univariate, df.train, type="response")
+gg_univariate1 +
+  geom_point(data = df.train, aes(y = probability), 
+             fill = "yellow", color = "magenta",  size = 4, shape = 21)+
+  geom_line(data = df.train, aes(y = probability))
+```
+
+Calculate odds
+```{r calculate-odds}
+df.train$odds <- df.train$probability / (1 - df.train$probability)
+df.train$log_odds_hat = log(df.train$odds)
+df.train$logOdds <-predict(fit.logit_univariate, df.train) #note type unspecified, default is log-odds!
+```
+
+```{r odds-malignant}
+#odds of being malignant 
+gg_odds_malignant <- ggplot(df.train, aes(x = clumpThickness, y = odds)) +
+  geom_point() + geom_line() + geom_hline(yintercept = 1, color = 'darkgreen', linetype = 'dashed')+
+  scale_y_continuous("Odds ratio of being malignant")+theme_bw()+xlim(c(0,11))
+gg_odds_malignant
+```
+
+```{r odds-benign}
+#odds of being benign 
+gg_odds_benign <- ggplot(df.train, aes(x = clumpThickness, y = 1/odds)) +
+  geom_point() + geom_line() + geom_hline(yintercept = 1, color = 'darkgreen', linetype = 'dashed')+
+  scale_y_continuous("Odds ratio of being benign")+theme_bw()+xlim(c(0,11))
+gg_odds_benign
+```
+
+График в логарифмической шкале:
+```{r odds-logScale}
+#same plot but in log scale
+gg_odds_logScale <- ggplot(df.train, aes(x = clumpThickness, y = odds)) +
+  geom_point() + geom_line() + geom_hline(yintercept = 1, color = 'darkgreen', linetype = 'dashed')+
+  scale_y_log10("Odds ratio of being malignant", labels = scales::comma)+theme_bw()+xlim(c(0,11))+ annotation_logticks(sides = "l")
+gg_odds_logScale
+```
+
+```{r log-odds}
+#or we use the log odds model
+gg_logOdds <- ggplot(df.train, aes(x = clumpThickness, y = log_odds_hat)) +
+  geom_point() + geom_line() + geom_hline(yintercept = 0, color = 'darkgreen', linetype = 'dashed')+
+  scale_y_continuous("Log(odds) of being malignant")+theme_bw()+xlim(c(0,11))
+gg_logOdds
+```
+
+```{r}
+#complete model
+df <- breast[-1]
+df$class <- factor(df$class, levels=c(2,4), labels = c("benign","malignant"))
+```
+
+```{r train-set}
+set.seed(1234)
+train <- sample(nrow(df), 0.7*nrow(df))
+df.train <- df[train,]
+df.validate <- df[-train,]
+```
+
+class ~. - точка означает, что берем все имеющиеся ковариаты. 
+```{r fit-all}
+#Logistic regression with glm()
+fit.logit <- glm(class~., data=df.train, family = binomial())
+summary(fit.logit)
+```
+Значимы те, кто далеко от нуля
+```{r coefs-full-model}
+if (extra) {
+  coefs_full_model <- ggcoef_model(fit.logit)
+  coefs_full_model
+  }
+
+```
+
+# Interpretation 
+```{r}
+if (extra) {
+  broom::augment(fit.logit)
+  broom::glance(fit.logit)
+  broom::tidy(fit.logit)
+}
+```
+
+# Evaluate model 
+assessing the response on validation data
+```{r model-probs}
+prob <- predict(fit.logit, df.validate, type="response")
+head(prob)
+```
+
+By default predict() function predicts the log odds of having a malignant outcome
+получили 6 ошибок второго рода и 1 ошибку первого рода
+Минус - не равные группы - несбалансированные классы
+```{r logit-perf}
+logit.pred <- factor(prob > .5, levels=c(FALSE, TRUE), labels = c("benign","malignant"))
+
+logit.perf <- table(df.validate$class, logit.pred, dnn = c("Actual", "Predicted") )
+logit.perf #performance of logistic regression
+```
+
+Confusion matrix
+площадь соответствует количеству
+```{r confusion-matrix}
+#Create confusion matrix
+confusion <- conf_mat(logit.perf)
+autoplot(confusion)
+summary(confusion, event_level = "second")
+```
+
+чувствительность и специфичность
+```{r auc}
+#Area under the curve 
+extra <- TRUE
+if (extra) {
+  # Create a ROC curve
+  ROC <- roc(as.numeric(df.validate$class), as.numeric(logit.pred))
+  
+  # Plot the ROC curve
+  plot(ROC, col = "blue")
+  
+  # Calculate the area under the curve (AUC)
+  auc(ROC)
+}
+```
+
+# (Advanced) feature selection --------------------------------------------
+Stepwise feature selection
+```{r reduced-model}
+# obtain a more parsimonious model
+logit.fit.reduced <- step(fit.logit)
+summary(logit.fit.reduced)
+```
+
+Clean up the model
+```{r broom-reduced}
+if (extra) {
+  broom::augment(logit.fit.reduced)
+  broom::glance(logit.fit.reduced)
+  broom::tidy(logit.fit.reduced)
+}
+```
+
+```{r ggpairs-reduced}
+if (extra) {
+  #coefficient significance for reduced model
+  reduced_coefs <- ggcoef_model(logit.fit.reduced)
+  reduced_coefs
+  gg_pairs #which covariates were removed? Were they correlated, maybe?
+}
+```

@@ -1,0 +1,13 @@
+"2","r error 4 (Ошибка в regmatches(rmdChunkOpts, regexec(.rs.reRmdChunkBegin(), rmdChunkOpts)) : 
+  R_Reprotect: только 4 защищенных элемента, не могу перезащитить индекс -1
+)"
+"2","Ошибка в .rs.findDataFrame("""", ""trial_results"", ""A3729035"", ""C:/R/Biostat_study/Biostat_project/.Rproj.user/04035969/viewer-cache"") : 
+  R_Reprotect: только 1 защищенный элемент, не могу перезащитить индекс -4
+"
+"2","Ошибка в .rs.findDataFrame("""", ""trial_results"", ""A3729035"", ""C:/R/Biostat_study/Biostat_project/.Rproj.user/04035969/viewer-cache"") : 
+  R_Reprotect: только 1 защищенный элемент, не могу перезащитить индекс -4
+"
+"2","Ошибка в .rs.describeColSlice(function (envName, objName, cacheKey, cacheDir)  : 
+  R_Reprotect: только 1 защищенный элемент, не могу перезащитить индекс -1
+"
+"0","View(trial_results)"

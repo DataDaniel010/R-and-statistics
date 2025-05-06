@@ -1,0 +1,2 @@
+"0","pima_full.pca <- prcomp(pima_clear, "
+"0","                        scale = T) # Не забываем про стандартизацию!"

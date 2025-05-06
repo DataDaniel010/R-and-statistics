@@ -1,0 +1,6 @@
+"0","umap_prep %>%"
+"0","  ggplot(aes(UMAP1, UMAP2)) + #  # можно добавить раскраску "
+"0","  geom_point(aes(color = as.character(pima_clear_with_ch$age_group),"
+"0","                 shape = pima_clear_with_ch$diabetes_ch), "
+"0","             alpha = 0.7, size = 2) +"
+"0","  labs(color = NULL) "

@@ -1,0 +1,330 @@
+---
+title: "Linear regression"
+author: Jelena Cuklina
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+Loading the packages
+```{r}
+library(tidyverse)
+library(GGally)
+library(broom)
+library(ggfortify)
+library(Hmisc)
+```
+
+ Setup 
+```{r}
+extra <- FALSE
+mathematical <- FALSE
+```
+
+как будут выглядеть графики:
+```{r}
+theme_set(theme_bw())
+```
+
+# Load data ---------------------------------------------------------------
+
+ Dataset:  brainhead.dat
+ Source: R.J. Gladstone (1905). "A Study of the Relations of the Brain toto the Size of the Head", Biometrika, Vol. 4, pp105-123
+ Description: Brain weight (grams) and head size (cubic cm) for 237 adults classified by gender and age group.
+ Variables/Columns
+ Gender    /* 1=Male, 2=Female  */
+ Age Range  /* 1=20-46, 2=46+  */
+ Head size (cm^3)  
+ Brain weight (grams)  
+
+ Loading the data
+```{r load-data}
+brainhead_dat <- read_table2("brainhead.dat.txt", 
+                             col_names = FALSE)
+# brainhead_dat <- read_table2("~/Downloads/regression_IB_intense_course/brain_head_data/brainhead.dat.txt", 
+#                              col_names = FALSE)
+names(brainhead_dat) <- c("Gender", "Age_range", "Head_size", "Brain_weight")
+brainhead_dat$Gender <- as.factor(brainhead_dat$Gender)
+brainhead_dat$Age_range <- as.factor(brainhead_dat$Age_range)
+brainhead_dat <- brainhead_dat %>% select(Brain_weight, Head_size, Age_range, Gender)
+```
+
+ Explore the data 
+ Hmisc::describe - полезная функция, если у вас незнакомый датасет (если до пары десятков переменных)
+```{r}
+ggpairs(brainhead_dat,  aes(colour = Gender, alpha = 0.4), legend = 3)+theme_bw()
+
+Hmisc::describe(brainhead_dat)
+```
+непрерывные: вес мозга, размер головы, категориальные - диапазон возраста, пол
+
+ extract the first two covariates to build the model
+```{r}
+gg_base <- ggplot(brainhead_dat, aes(y = Brain_weight, x = Head_size)) +  
+  geom_point()
+gg_base+theme_bw()
+```
+
+ Univariate model 
+ Y - слева от ~ X справа (может быть несколько)
+```{r}
+model_univariate <- lm(Brain_weight ~ Head_size,  data = brainhead_dat)
+summary(model_univariate)
+```
+
+ plot the data with the linear regression result. lm - линия линейной регрессии
+```{r}
+gg_uni <- gg_base +  
+  geom_smooth(method = "lm", se = FALSE , fullrange=TRUE)
+gg_uni #Does it look like the relationship is close to linear?
+```
+
+ Understanding the intercept and the slope
+```{r}
+gg_uni +ylim(c(0, 1600))+xlim(c(0, 5000))
+```
+ Slope = (1500 - 1000)/(4500 - 2500)
+ intercept = ? 1500? 0? 300? 150?
+
+#  Making predictions ------------------------------------------------------
+```{r}
+set.seed(42) # /*to create same random numbers below */
+n_new <- 10
+new_data <- data.frame(Head_size = runif(n_new, min = min(brainhead_dat$Head_size), 
+                                         max = max(brainhead_dat$Head_size)),
+                       Gender = sample(unique(brainhead_dat$Gender), size = n_new, replace = TRUE),
+                       Age_range = sample(unique(brainhead_dat$Age_range), size = n_new, replace = TRUE))
+predicted_brain_weight <- predict(model_univariate, new_data)
+new_data$Brain_weight <- predicted_brain_weight
+gg_fitted <- gg_uni + 
+  geom_point(data = new_data, 
+             color = "magenta", fill = "yellow", size =4, shape = 21)
+gg_fitted
+```
+
+  testing prediction out of expected range
+```{r}
+new_data1 <- new_data %>%
+  add_row(Head_size = 0, 
+          Brain_weight = predict(model_univariate, newdata = data.frame(Head_size = 0)))
+```
+  How big is the brain with the head size of 0?
+
+```{r}
+gg_uni + 
+  geom_point(data = new_data1, 
+             color = "magenta", fill = "yellow", size =4, shape = 21)
+```
+Можно подставлять нелогичные и странные с точки зрения жизни параметры
+
+#  Analyzing the model -----------------------------------------------------
+ assessing the model fit
+ fitted - y с крышечкой, то что получилось по оценке модели 
+ resid - разница между brain weight и fitted (между измерением и оценкой модели)
+```{r}
+broom::augment(model_univariate)
+```
+
+ assess model metrics
+```{r}
+broom::glance(model_univariate)
+```
+получили 0,6 тк оперируем значениями от 0 до 1, то полученное значение не самое плохое. Пригодится ли для практики другой вопрос. p-value хороший. Линейная зависимость между весом мозга и размером головы есть.
+
+ correlation of Brain weight and Head size
+```{r}
+cor(brainhead_dat$Brain_weight, brainhead_dat$Head_size)
+```
+
+ correlation squared of Brain weight and Head size
+```{r}
+cor(brainhead_dat$Brain_weight, brainhead_dat$Head_size)^2
+```
+если у нас одна переменная и она непрерывная, то линейная регрессия = корреляция
+
+#  (Advanced) model diagnostics --------------------------------------------
+```{r}
+if (mathematical) {
+  # /*what's mathematically most important is residuals*/
+  # /*calculation of RSE is a multi-step story (degrees of freedom etc)*/
+  residuals_sq <- residuals(model_univariate) ^ 2
+  n_obs <- nrow(brainhead_dat)
+  deg_freedom = n_obs - 2 # /*this is a tough concept, seriously*/
+  rse <- sqrt(resid_sum_of_sq / deg_freedom)
+  rmse = sqrt(resid_sum_of_sq / n_obs)
+  residuals(model_univariate)
+  # /*residuals satisfy a few conditions:*/
+    # /* 1. Residuals should not depend on fitted value (align along the horizontal line)*/
+    # /* 2. should be normally distributed (Q-Q plot should align along the line)*/
+  autoplot( model_univariate,   which = 1:2,   nrow = 2,   ncol = 1)
+  
+  # /*also, linear regression is sensitive to outliers (leverage and )*/
+  # /*points with high leverage lie in the "ends" of the X space*/
+  hatvalues(model_univariate) # /*.hat column in "augment(model_univariate)"*/
+  # /*some points have high influence, assessed with Cook's distance*/
+  # /*influence assesses how the model would change if you leave the observation out*/
+  cooks.distance(model_univariate) # /*.cooksd column in "augment(model_univariate)"*/
+  extreme_points <- model_univariate %>%  
+    broom::augment() %>%  
+    select(Brain_weight, Head_size, 
+           cooks_dist = .cooksd) %>%  
+    arrange(desc(cooks_dist)) %>%   
+    head()
+  outliers <- model_univariate %>%  
+    broom::augment() %>%  
+    select(Brain_weight, Head_size, 
+           leverage = .hat) %>%  
+    arrange(desc(leverage)) %>%   
+    head()
+  extreme_heads <- rbind(extreme_points %>% select(-cooks_dist), 
+                         outliers %>% select(-leverage)) %>% 
+    pull(Head_size)
+  brainhead_dat1 <- brainhead_dat %>%
+    filter(!(Head_size %in% extreme_heads)) %>%
+    add_row(Head_size = c(4600, 2800), Brain_weight = c(1000, 1500))
+  gg_leverage <- gg_uni +
+    geom_smooth(data = brainhead_dat1, method = "lm", se = FALSE, color = "red")+
+    geom_point(data = data.frame(Head_size = c(4600, 2800), Brain_weight = c(1000, 1500)), 
+               color = 'red', size = 3)+ # /*adding "high leverage points*/
+    geom_point(data = extreme_points, color = 'purple', fill = "purple", size = 4, shape = 21) + # /*coloring top-cooks distance*/
+    geom_point(data = outliers, color = 'pink', size = 3) # /*coloring top-leverage distance*/
+    
+  gg_leverage # /*note one top-leverage and top-cooks.dist overlap*/
+  
+}
+```
+
+
+# (Extra) Model object details ----------------------------------------------------
+```{r}
+if (extra) {
+  # /*in addition to summary(model_univariate)*/
+  coefficients(model_univariate)
+  fitted(model_univariate) # /*equivalent to predict(model_univariate, brainh), but not exactly same, check: 1) all(predict(model_univariate, brainhead_dat) == fitted(model_univariate)); 2) summary(predict(model_univariate, brainhead_dat) - fitted(model_univariate))*/
+  
+  # /*in addition to tidy(model_univariate) and augment(model_univariate)*/
+  tidy(model_univariate)
+}
+```
+
+# univariate regression: categorical variable --------------------
+
+```{r}
+gg_cat <- ggplot(brainhead_dat, aes(Brain_weight)) +  
+  geom_histogram(bins = 9) +  
+  facet_wrap(vars(Gender), ncol = 1)
+gg_cat # /*one gender has clearly higher brain mass*/
+```
+
+ build the model with categorical predictor
+```{r}
+model_univariate_cat <- lm(Brain_weight ~ Gender,  data = brainhead_dat)
+summary(model_univariate_cat)
+```
+intercept в данном случае - среднее значение референсной категории
+-112 - средняя разница между первой и второй категориями
+Когда референсная категория очевидна, но мы можем насильно приказать какой будет интерсепт, чтобы не было приоритета у какой то категории
+
+ modification to remove the intercept:
+ + 0 убирает интерсепт, получаем ответ на вопрос отличается ли вес мозга значимо от нуля
+```{r}
+model_univariate_cat1 <- lm(Brain_weight ~ Gender + 0,  data = brainhead_dat)
+summary(model_univariate_cat1)
+```
+полученный R-square очень большой, ассоциация очень сильная - размер мозга зависит от пола
+
+#  Multivariate model 
+```{r}
+model_bivariate <- lm(Brain_weight ~ Head_size + Gender,  data = brainhead_dat)
+summary(model_bivariate)
+```
+
+
+ multivariate without the intercept
+```{r}
+model_multivariate_noIntercept <- lm(Brain_weight ~ Head_size + Gender + 0, 
+                                     data = brainhead_dat)
+summary(model_multivariate_noIntercept)
+```
+ one intercept coefficient for each category
+
+ comparing coefficients
+```{r}
+coefficients(model_multivariate_noIntercept)
+coefficients(model_univariate)
+coefficients(model_univariate_cat1)
+```
+Коэффициенты для разных моделей сравнивать изначально не очень корректно. 
+
+ fitting the model with original X values
+```{r}
+brainhead_dat_fitted <- brainhead_dat %>%
+  mutate(fitted = predict(model_bivariate, brainhead_dat))
+```
+
+ plot parallel slopes
+```{r}
+gg_parallel <- ggplot(brainhead_dat_fitted, 
+                      aes(y = Brain_weight, x = Head_size, color = Gender)) +  
+  geom_point() +  
+  geom_line(data = brainhead_dat_fitted, 
+            mapping = aes(y = fitted))+
+  geom_line(data = brainhead_dat_fitted %>% filter(Gender == 2), 
+            mapping = aes(y = fitted), size = 2)
+gg_parallel + theme_bw()
+```
+можно исключить переменную гендер, она особо не влияет на прямую
+
+
+ Two models
+```{r}
+gg_two_models <- ggplot(brainhead_dat_fitted, 
+                        aes(y = Brain_weight, x = Head_size, color = Gender)) +  
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+# full model
+```{r}
+model_multivariate <- lm(Brain_weight ~ .,  data = brainhead_dat)
+summary(model_multivariate)
+```
+
+ plotting it again
+```{r}
+brainhead_dat_fitted <- brainhead_dat_fitted %>%
+  mutate(fitted_all = predict(model_multivariate, brainhead_dat))
+gg_parallel_all <- ggplot(brainhead_dat_fitted, 
+                      aes(y = Brain_weight, x = Head_size, color = Gender)) +  
+  geom_point() +  
+  geom_line(data = brainhead_dat_fitted, 
+            mapping = aes(y = fitted_all, linetype = Age_range), size = 2)
+gg_parallel_all + theme_bw() # /*see 4 parallel lines?*/
+gg_parallel_all + theme_bw()+xlim(c(3500, 3600))+ylim(c(1200, 1400)) # /*zoom in to see*/
+```
+
+ Some extra material
+```{r}
+if (extra){
+  # /*coefficients*/
+  gg_coefs <- ggcoef_model(
+    model_multivariate,
+    no_reference_row = broom.helpers::all_categorical(),
+    categorical_terms_pattern = "{level}/{reference_level}"
+  )
+  gg_coefs
+}
+```
+
+
+ assess the model:
+```{r}
+glance(model_multivariate)
+glance(model_univariate)
+glance(model_univariate_cat)
+```
+
+ are models different in quality?
+
