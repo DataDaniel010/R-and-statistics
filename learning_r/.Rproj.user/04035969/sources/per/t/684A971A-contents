@@ -197,8 +197,20 @@ next <- c(2, 34)
 super_long_name_in_fact_so_long_i_cannot_stop_typing_please_help <- 2:15 #можно
 ```
 
+Reserved words in R:
+
+if, else, repeat, while, function, for, in, next, break, TRUE, FALSE, NULL, Inf, NaN, NA,
+NA_integer, NA_real, NA_complex, NA_character
+
 ```{r}
-?is.logical
+if <- 1
+TRUE <- 5
+```
+
+You can create non valid names using backtick (\`)
+
+```{r}
+`if` <- 5
 ```
 
 ## Types of data
@@ -264,6 +276,9 @@ super_long_name_in_fact_so_long_i_cannot_stop_typing_please_help <- 2:15 #мож
 
     sin(pi) #must be zero but no - из за неточности хранения дробных чисел
 
+    complexnumber <- 2+2i
+    class(complexnumber)
+
     #CHARACTER
     s <- 'hello world'
     class(s)
@@ -284,7 +299,10 @@ super_long_name_in_fact_so_long_i_cannot_stop_typing_please_help <- 2:15 #мож
 
 ## Functions (local environment)
 
-Syntax: function() { return() } тело функции существует в локальном окружении
+-   Syntax: function() { return() } тело функции существует в локальном окружении
+
+-   если в документации функции есть аргументы, у которых через = что-то написано, то это
+    означает, что эти параметры имеют значения по умолчанию
 
 ```{r}
 returntwo <- function(y) {

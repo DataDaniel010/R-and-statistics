@@ -1,9 +1,9 @@
 {
     "id": "BC52DD45",
-    "path": "C:/R/learning_r/Practice.Rmd",
+    "path": "C:/R/R-and-statistics/learning_r/Practice.Rmd",
     "project_path": "Practice.Rmd",
     "type": "r_markdown",
-    "hash": "1815535488",
+    "hash": "138113125",
     "contents": "",
     "dirty": false,
     "created": 1731172801755.0,
@@ -12,17 +12,17 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "171,168",
-        "scrollLine": "148",
-        "last_setup_crc32": "",
+        "cursorPosition": "221,104",
+        "scrollLine": "199",
+        "last_setup_crc32": "d2619973b988497f",
         "docOutlineVisible": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1742738991,
+    "lastKnownWriteTime": 1746546634,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1742738991576,
+    "last_content_update": 1746546634112,
     "read_only": false,
     "read_only_alternatives": []
 }
