@@ -2454,7 +2454,7 @@ subjects in a vector which we tabulate.
 factor(vect, levels)
 
 |  |  |
-|---------------------------------------------|---------------------------------------------|
+|----|----|
 | `levels` | an optional vector of the unique values (as character strings) that `x` might have taken. |
 
 ```{r}

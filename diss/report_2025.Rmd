@@ -1,0 +1,1152 @@
+---
+title: "report_2025"
+author: "Danil Tukanov"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(purrr)
+
+```
+1. Загрузка данных
+```{r}
+getwd()
+data <- read_excel('data/raw/Pivot_table_full.xlsx')
+View(data)
+
+```
+ 
+2. Преобразуем данные
+
+```{r}
+data$Condition <- factor(data$Condition, levels = c('N', "ALX", "STZ")) 
+#данные в condition стали фактором
+data$`Duration, days` <- factor(data$`Duration, days`, levels = c('30', '60'))
+
+data$Name <- factor(data$Name, levels = c("N 30", "N 60", "ALX 30", "ALX 60", "STZ 30", "STZ 60"))
+
+str(data$Condition)
+
+str(data)
+
+```
+
+
+3. Статистика
+
+Описательная статистика
+```{r}
+data %>% 
+  group_by(Name) %>% 
+  summarize(
+    Mean = mean(`Glucose, mmol/l`),
+    Median = median(`Glucose, mmol/l`)
+  )
+
+```
+Функция для попарного сравнения групп по одному критерию:
+```{r}
+analyze_pairs <- function(data, criteria) {
+  groups <- unique(data$Name)
+  pairs <- combn(groups, 2, simplify = F)
+  
+  map_df(pairs, function(pair) {
+    #фильтрация данных для пары групп
+    group1_data <- data[data$Name == pair[1], criteria]
+    group2_data <- data[data$Name == pair[2], criteria]
+    
+    test <- wilcox.test(group1_data, group2_data, exact = F)
+    
+    tibble(
+      Parameter = criteria,
+      Group1 = pair[1],
+      Group2 = pair[2],
+      p.value = test$p.value,
+      W = test$statistic
+    )
+    
+  })
+}
+
+
+```
+
+применение ко всем критериям (указать нужные столбцы):
+```{r}
+parameter <- colnames(data)[c(10, 12:28)]
+
+#замена NA на медиану, чтобы все работало норм:
+data <- data %>% 
+  mutate(across(17:28, ~ifelse(is.na(.), median(., na.rm = T), .)))
+
+sum(is.na(data[c(10,12:28)]))
+str(data)
+
+all_results <- map_df(parameter, ~analyze_pairs(data, .x)) %>% 
+  group_by(Parameter) %>% 
+  mutate(
+    p.adj = p.adjust(p.value, method = "BH"), 
+    significance = case_when(
+      p.adj < 0.001 ~ "***",
+      p.adj < 0.01 ~ "**",
+      p.adj < 0.05 ~ "*",
+      TRUE ~ "ns"
+    )
+  )
+
+
+```
+
+
+```{r}
+data_wide <- read_excel("data/raw/Short_version.xlsx", col_types = c("numeric", "text", rep("numeric", 18)))
+
+data_wide$Group <- factor(data_wide$Group, levels = c("N_30", "N_60", "ALX_30", "ALX_60", "STZ_30", "STZ_60"))
+str(data_wide)
+
+View(data_wide)
+
+# Показать структуру данных
+str(data_wide)
+
+# Проверить первые строки
+head(data_wide, 10)
+
+# Проверить NA в каждом столбце
+colSums(is.na(data_wide))
+
+
+# Уникальные группы
+unique(data_wide$Group)
+
+# Проверить тип данных критериев
+sapply(data_wide[, criteria], class)
+
+# Количество наблюдений по группам
+table(data_wide$Group)
+
+# Выберите один критерий для теста
+test_col <- "Glucose"  # Замените на реальное название
+
+# Проверка данных для этого критерия
+data_wide %>%
+  group_by(Group) %>%
+  summarise(
+    n = n(),
+    n_na = sum(is.na(.data[[test_col]])),
+    mean = mean(.data[[test_col]], na.rm = TRUE)
+  )
+
+
+analyze_criterion_wide <- function(data, criterion_col) {
+  # Проверка существования столбца
+  if (!criterion_col %in% names(data)) {
+    stop("Столбец '", criterion_col, "' не найден")
+  }
+  
+  # Проверка типа данных
+  if (!is.numeric(data[[criterion_col]])) {
+    message("Столбец '", criterion_col, "' не числовой. Тип: ", class(data[[criterion_col]]))
+    return(NULL)
+  }
+  
+  # Уникальные группы с количеством наблюдений
+  group_stats <- data %>%
+    group_by(Group) %>%
+    summarise(
+      n = sum(!is.na(.data[[criterion_col]]))
+    ) %>%
+    filter(n >= 3)  # Группы с достаточным количеством данных
+  
+  if (nrow(group_stats) < 2) {
+    message("Для критерия '", criterion_col, "' недостаточно групп с данными. Доступные группы:")
+    print(group_stats)
+    return(NULL)
+  }
+  
+  # Проводим попарные сравнения
+  combn(group_stats$Group, 2, simplify = FALSE) %>%
+    map_df(function(pair) {
+      x <- data[[criterion_col]][data$Group == pair[1]]
+      y <- data[[criterion_col]][data$Group == pair[2]]
+      
+      x <- x[!is.na(x)]
+      y <- y[!is.na(y)]
+      
+      if (length(x) < 3 || length(y) < 3) {
+        return(tibble(
+          Criterion = criterion_col,
+          Group1 = pair[1],
+          Group2 = pair[2],
+          p.value = NA_real_,
+          n1 = length(x),
+          n2 = length(y),
+          note = "Недостаточно данных после удаления NA"
+        ))
+      }
+      
+      test <- wilcox.test(x, y, exact = FALSE)
+      tibble(
+        Criterion = criterion_col,
+        Group1 = pair[1],
+        Group2 = pair[2],
+        p.value = test$p.value,
+        W = test$statistic,
+        n1 = length(x),
+        n2 = length(y),
+        note = NA_character_
+      )
+    })
+}
+
+criteria <- colnames(data_wide)[3:20]
+
+results <- map(setNames(nm = criteria), ~ analyze_criterion_wide(data_wide, .x)) %>% 
+  compact() %>%
+  bind_rows() %>%
+  group_by(Criterion) %>%
+  mutate(
+    p.adj = p.adjust(p.value, method = "BH"),
+    significance = case_when(
+      p.adj < 0.001 ~ "***",
+      p.adj < 0.01 ~ "**",
+      p.adj < 0.05 ~ "*",
+      TRUE ~ "ns"
+    )
+  )
+
+
+View(results)
+
+set.seed(123)
+data_wide <- data.frame(
+  Animal = rep(1:10, 6),
+  Group = rep(paste0("Group_", LETTERS[1:6]), each = 10),
+  Crit1 = rnorm(60, mean = rep(c(5, 6, 7, 5.5, 6.5, 8), each = 10)),
+  Crit2 = rpois(60, lambda = rep(c(10, 15, 20, 12, 18, 25), each = 10)),
+  # ... аналогично для Crit3-Crit10
+  stringsAsFactors = TRUE
+)
+
+```
+
+
+```{r}
+
+analyze_criterion_wide <- function(data, criterion_col) {
+  # Проверяем, что столбец числовой
+  if (!is.numeric(data[[criterion_col]])) {
+    stop("Критерий '", criterion_col, "' не является числовым. Проверьте данные.")
+  }
+  
+  groups <- unique(data$Group)
+  pairs <- combn(groups, 2, simplify = FALSE)
+  
+  map_df(pairs, function(pair) {
+    # Фильтрация данных для пары групп (с проверкой NA)
+    x <- data[data$Group == pair[1], criterion_col] %>% na.omit()
+    y <- data[data$Group == pair[2], criterion_col] %>% na.omit()
+    
+    # Проверка, что осталось достаточно данных
+    if (length(x) < 3 || length(y) < 3) {
+      return(tibble(
+        Criterion = criterion_col,
+        Group1 = pair[1],
+        Group2 = pair[2],
+        p.value = NA_real_,
+        W = NA_real_,
+        note = "Недостаточно данных (<3 наблюдений)"
+      ))
+    }
+    
+    # Тест Манна-Уитни
+    test <- wilcox.test(x, y, exact = FALSE)
+    
+    tibble(
+      Criterion = criterion_col,
+      Group1 = pair[1],
+      Group2 = pair[2],
+      p.value = test$p.value,
+      W = test$statistic,
+      note = NA_character_
+    )
+  })
+}
+
+```
+
+```{r}
+criteria <- colnames(data_wide)[3:4]  # Предполагаем, что критерии в столбцах 
+
+# Безопасная версия функции (перехватывает ошибки)
+safe_analyze <- safely(analyze_criterion_wide)
+
+# Применяем ко всем критериям
+results <- map(setNames(nm = criteria), ~ safe_analyze(data_wide, .x)$result) %>% 
+  compact() %>%  # Удаляем NULL (если были ошибки)
+  bind_rows() %>% 
+  group_by(Criterion) %>% 
+  mutate(
+    p.adj = p.adjust(p.value, method = "BH"),
+    significance = case_when(
+      p.adj < 0.001 ~ "***",
+      p.adj < 0.01 ~ "**",
+      p.adj < 0.05 ~ "*",
+      TRUE ~ "ns"
+    )
+  )
+
+```
+
+
+
+
+
+4. Визуализация
+```{r}
+glucose <- ggplot(data, aes(x = Condition, y = `Glucose, mmol/l`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 31,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 24,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 18,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 19,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.3,
+           y = 20,
+           label = "#",
+           color = "red",
+           size = 5) +
+  labs(title = 'Концентрация глюкозы в крови животных', 
+       x = "Состояние", 
+       y = "Глюкоза, ммоль/л", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 32),
+                     breaks = seq(0, 32, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), 
+        text = element_text(size = 14)) 
+
+
+ggsave("images/glucose.png", plot = glucose, width = 8, height = 6, dpi = 300)
+
+
+
+```
+
+
+```{r}
+
+insulin <- ggplot(data, aes(x = Condition, y = Insulin, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  labs(title = 'Концентрация инсулина в крови животных', 
+       x = "Состояние", 
+       y = "Инсулин мкЕд/мл", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 30),
+                     breaks = seq(0, 30, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14)) 
+
+ggsave('images/insulin.png', plot = insulin, width = 8, height = 6, dpi = 300)
+
+```
+
+
+
+```{r}
+
+HbAc <- ggplot(data, aes(x = Condition, y = `HbA1c %`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 11,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 11,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 11,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 11,
+           label = "*",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество гликированного гемоглобина в крови животных', 
+       x = "Состояние", 
+       y = "Гликированный гемоглобин, %", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 13),
+                     breaks = seq(0, 14, by = 2)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.2, size = 16, face = 'bold'), 
+        text = element_text(size = 14)) 
+
+ggsave('images/HbAc.png', plot = HbAc, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+RNA <- ggplot(data, aes(x = Condition, y = `RNA Concentration mcg/ml`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.2,
+           y = 20,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 1.8,
+           y = 20,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 23,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 11,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 20,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  labs(title = 'Содержание вкРНК в крови экспериментальных животных', 
+       x = "Состояние", 
+       y = "Концентрация вкРНК, мкг/мл", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 27),
+                     breaks = seq(0, 25, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14)) 
+
+ggsave('images/RNA.png', plot = RNA, width = 8, height = 6, dpi = 300)
+
+
+```
+
+
+
+```{r}
+DNA <- ggplot(data, aes(x = Condition, y = `DNA concentration mcg/ml`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+   annotate("text",
+           x = 1.8,
+           y = 23,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 17,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 30,
+           label = "*'",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 9,
+           label = "+",
+           color = "red",
+           size = 6) +
+  labs(title = 'Содержание вкДНК в крови экспериментальных животных', 
+       x = "Состояние", 
+       y = "Концентрация вкДНК, мкг/мл", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 30),
+                     breaks = seq(0, 30, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14)) 
+
+ggsave('images/DNA.png', plot = DNA, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+
+histone <- ggplot(data, aes(x = Condition, y = `Histone concentration mcg/ml`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.2,
+           y = 155,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 1.8,
+           y = 170,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 430,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 430,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 335,
+           label = "*+'",
+           color = "red",
+           size = 8) +
+  labs(title = 'Содержание гистонов в крови экспериментальных животных', 
+       x = "Состояние", 
+       y = "Концентрация гистонов, мкг/мл", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 430),
+                     breaks = seq(0, 430, by = 50)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+
+ggsave('images/histone.png', plot = histone, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+
+sod_liver <- ggplot(data, aes(x = Condition, y = `SOD liver (ед/мин*г)`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 16,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 12,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 23,
+           label = "*'",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 22,
+           label = "*'",
+           color = "red",
+           size = 8) +
+  labs(title = 'Активность СОД в ткани печени', 
+       x = "Состояние", 
+       y = "Активность СОД в ткани печени, ед/мин*г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 30),
+                     breaks = seq(0, 30, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+
+ggsave('images/sod_liver.png', plot = sod_liver, width = 8, height = 6, dpi = 300)
+
+
+```
+
+
+```{r}
+catalase_liver <- ggplot(data, aes(x = Condition, y = `Catalase liver`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 45,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 40,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 27,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 29,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  labs(title = 'Активность каталазы в ткани печени', 
+       x = "Состояние", 
+       y = "Активность каталазы в ткани печени, ммоль/мин*г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 45),
+                     breaks = seq(0, 45, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`Catalase liver`))
+
+ggsave('images/catalase_liver.png', plot = catalase_liver, width = 8, height = 6, dpi = 300)
+
+```
+
+
+
+```{r}
+mda_liver <- ggplot(data, aes(x = Condition, y = `MDA liver`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 34,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 41,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 36,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 41,
+           label = "*",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество МДА в ткани печени', 
+       x = "Состояние", 
+       y = "Количество МДА в ткани печени, нмоль/г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 41),
+                     breaks = seq(0, 41, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`MDA liver`))
+
+ggsave('images/mda_liver.png', plot = mda_liver, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+gsh_liver <- ggplot(data, aes(x = Condition, y = `GSH liver`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 8,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.2,
+           y = 7,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 7,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 6.5,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество GSH в ткани печени', 
+       x = "Состояние", 
+       y = "Количество GSH в ткани печени, мкмоль/г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 10),
+                     breaks = seq(0, 10, by = 2)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`GSH liver`))
+
+ggsave('images/gsh_lvier.png', plot = gsh_liver, width = 8, height = 6, dpi = 300)
+
+```
+
+
+
+```{r}
+sod_spleen <- ggplot(data, aes(x = Condition, y = `SOD spleen`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 2.2,
+           y = 8,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 6.5,
+           label = "+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 7.5,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  labs(title = 'Активность СОД в ткани селезенки', 
+       x = "Состояние", 
+       y = "Активность СОД в ткани селезенки, ед/мин*г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 17),
+                     breaks = seq(0, 17, by = 2)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`SOD spleen`))
+
+ggsave('images/sod_spleen.png', plot = sod_spleen, width = 8, height = 6, dpi = 300)
+
+
+```
+
+
+```{r}
+catalase_spleen <- ggplot(data, aes(x = Condition, y = `Catalse spleen`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 8.5,
+           label = "*",
+           color = "red",
+           size = 8) +
+    annotate("text",
+           x = 2.2,
+           y = 6.5,
+           label = "+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 8.5,
+           label = "+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 4,
+           label = "*+'",
+           color = "red",
+           size = 8) +
+  labs(title = 'Активность каталазы в ткани селезенки', 
+       x = "Состояние", 
+       y = "Активность каталазы в ткани селезенки, ммоль/мин*г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 10),
+                     breaks = seq(0, 10, by = 2)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`Catalse spleen`))
+
+ggsave('images/catalase_spleen.png', plot = catalase_spleen, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+mda_spleen <- ggplot(data, aes(x = Condition, y = `MDA spleen`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+   annotate("text",
+           x = 1.8,
+           y = 44,
+           label = "*",
+           color = "red",
+           size = 8) +
+    annotate("text",
+           x = 2.2,
+           y = 54,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 71,
+           label = "*+",
+           color = "red",
+           size = 6) +
+  annotate("text",
+           x = 3.2,
+           y = 55,
+           label = "*",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество МДА в ткани селезенки', 
+       x = "Состояние", 
+       y = "Количество МДА в ткани селезенки, нммоль/г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 71),
+                     breaks = seq(0, 71, by = 10)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`MDA spleen`))
+
+ggsave('images/mda_spleen.png', plot = mda_spleen, width = 8, height = 6, dpi = 300)
+
+```
+
+
+
+```{r}
+gsh_spleen <- ggplot(data, aes(x = Condition, y = `GSH spleen`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 2.7,
+           label = "*",
+           color = "red",
+           size = 8) +
+    annotate("text",
+           x = 2.2,
+           y = 2,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 2,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 2.5,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество GSH в ткани селезенки', 
+       x = "Состояние", 
+       y = "Количество GSH в ткани селезенки, нммоль/г", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 10),
+                     breaks = seq(0, 10, by = 2)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`GSH spleen`))
+
+
+ggsave('images/gsh_spleen.png', plot = gsh_spleen, width = 8, height = 6, dpi = 300)
+
+```
+
+
+
+```{r}
+wbc <- ggplot(data, aes(x = Condition, y = `WBC 10e9`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 16,
+           label = "*",
+           color = "red",
+           size = 8) +
+    annotate("text",
+           x = 2.2,
+           y = 14,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 12,
+           label = "*",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 10,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество WBC в крови животных', 
+       x = "Состояние", 
+       y = "Количество WBC в крови животных, 10e9", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 27),
+                     breaks = seq(0, 27, by = 5)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`WBC 10e9`))
+
+ggsave('images/wbc.png', plot = wbc, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+rbc <- ggplot(data, aes(x = Condition, y = `RBC 10e12`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 10.5,
+           label = "*",
+           color = "red",
+           size = 8) +
+    annotate("text",
+           x = 2.2,
+           y = 11,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 12,
+           label = "*+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 9.5,
+           label = "*+'",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество RBC в крови животных', 
+       x = "Состояние", 
+       y = "Количество RBC в крови животных, 10e12", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 15),
+                     breaks = seq(0, 15, by = 2)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`RBC 10e12`))
+
+ggsave('images/rbc.png', plot = rbc, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+
+hgb <- ggplot(data, aes(x = Condition, y = `HGB g/L`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  labs(title = 'Концентрация гемоглобина в крови животных', 
+       x = "Состояние", 
+       y = "Концентрация гемоглобина в крови животных, г/л", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 250),
+                     breaks = seq(0, 250, by = 50)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`HGB g/L`))
+
+ggsave('images/hgb.png', plot = hgb, width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+plt <- ggplot(data, aes(x = Condition, y = `PLT 10e9`, fill = `Duration, days`)) +
+  geom_boxplot(position = position_dodge(0.8), 
+               outliers = F) + 
+  geom_jitter(position = position_dodge(0.8), 
+              size = 1.5) +
+  annotate("text",
+           x = 1.8,
+           y = 1100,
+           label = "*",
+           color = "red",
+           size = 8) +
+    annotate("text",
+           x = 2.2,
+           y = 1750,
+           label = "+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 2.8,
+           y = 2000,
+           label = "+",
+           color = "red",
+           size = 8) +
+  annotate("text",
+           x = 3.2,
+           y = 800,
+           label = "*'",
+           color = "red",
+           size = 8) +
+  labs(title = 'Количество тромбоцитов в крови животных', 
+       x = "Состояние", 
+       y = "Количество тромбоцитов в крови животных, 10е9", 
+       fill = "Длительность") +
+  scale_fill_discrete(labels = c('30 дней', "60 дней")) +
+  scale_y_continuous(limits = c(0, 2500),
+                     breaks = seq(0, 2500, by = 500)) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = 'bold'), text = element_text(size = 14))
+
+max(na.omit(data$`PLT 10e9`))
+
+
+ggsave('images/plt.png', plot = plt, width = 8, height = 6, dpi = 300)
+
+```
+
+
+
+
+
+
+
